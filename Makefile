@@ -17,7 +17,7 @@ BUILD_D		:=	.build/
 LIB_D		:=	
 #---------------SRCs and Libs-(mac)\/--------------
 SRC			:=	main.cpp
-SRC_CLASSES	:=	
+SRC_CLASSES	:=	Socket.cpp
 INC			:=	inc/ inc/classes/
 LIB			:=
 FRAMEWORK	:=

@@ -1,6 +1,17 @@
 #include <iostream>
-int main(int ac, char** av)
+#include <Socket.hpp>
+#include <cstdio>
+#include <cstdlib>
+int main(void)
 {
-    for (int i = 1; i < ac; i++)
-        std::cout<< av[i] << std::endl;
+    Socket  a;
+    Socket  b("127.0.0.1", 8080);
+
+    if (listen(b.getFd(), 1) < 0)
+    {
+        perror("cannot listen");
+        exit(1);
+    }
+    Socket::Accept(b, a);
+    std::cout << "SUCCESFULLY CONNECTED" << std::endl;
 }

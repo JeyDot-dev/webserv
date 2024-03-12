@@ -6,7 +6,7 @@
 /*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/10 11:14:07 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2024/03/12 13:00:59 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/12 15:48:39 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,15 +50,9 @@ int	stringArraySize(std::string *array) {
 }
 
 void	handleListen(WebServ &server, std::vector<std::string> tokens) {
-	std::vector<std::string>::iterator	it;
-	unsigned int						port;
-
-	for (it = tokens.begin(); it != tokens.end(); it++) {
-		port = atoi(it->c_str());
-		if (port == 0)
-			throw std::runtime_error("Invalid listen port");
-		server.setPort(port);
-	}
+	(void)server;
+	(void)tokens;
+	std::cout << "handleListen" << std::endl;
 }
 
 void	handleServerName(WebServ &server, std::vector<std::string> tokens) {
@@ -103,13 +97,13 @@ void	handleClientMaxBodySize(WebServ &server, std::vector<std::string> tokens) {
 	std::cout << "handleClientMaxBodySize" << std::endl;
 }
 
-void	handleLocation(WebServ &server, std::stringstream block) {
+void	handleLocation(WebServ &server, std::vector<std::string> tokens) {
 	(void)server;
 	(void)tokens;
 	std::cout << "handleLocation" << std::endl;
 }
 
-void	serverConfigSwitcher(int i, std::vector<std::string> tokens) {
+void	serverConfigSwitcher(int i, std::vector<std::string> tokens, WebServ &server) {
 	switch (i) {
 		case 0:
 			handleListen(server, tokens);
@@ -143,57 +137,31 @@ void	serverConfigSwitcher(int i, std::vector<std::string> tokens) {
 	}
 }
 
-void	serverConfigParser(WebServ &server, std::vector<std::vector<std::string>> tokensVector) {
-	for (std::vector<std::vector>::iterator vectorIt = tokensVector.begin(); vectorIt != tokensVector.end(); vectorIt++) {
-		for (int i = 0; i < stringArraySize(server_config); i++) {
-			if (*vectorIt[0] == server_config[i]) {
-				serverConfigSwitcher(i, *vectorIt);
-			}
-		}
+std::vector<std::string>	configFileTokenizer(std::string filename) {
+	std::vector<std::string> tokens;
+
+	std::ifstream filestream(filename.c_str());
+	if (!filestream.is_open()) {
+		std::cerr << "Unable to open file: " << filename << std::endl;
+		return tokens;
 	}
-}
 
-std::stringstream	getBracketBlock(std::ifstream filestream) {
-	std::stringstream	block;
-	unsigned int		openBracket = 1;
-	char				ch;
-
-	while (filestream.get(ch) && openBracket) {
-		block << ch;
-		if (ch == '{')
-			openBracket++;
-		else if (ch == '}')
-			openBracket--;
-	}
-	if (openBracket)
-		throw std::runtime_error("Opened Bracket in config file");
-	return	block;
-}
-
-std::vector<std::vector<std::string>>	serverConfigTokenizer(std::ifstream &filestream) {
-	std::vector<std::vector<std::string>>	serverTokensVector;
-	std::vector<std::string>				serverTokens;
-	std::string								line;
-
+	std::string line;
 	while (std::getline(filestream, line)) {
-		std::string			token;
-		std::istringstream	iss(line);
-		if (line.find("{")) {
-			bool	openBracket = true;
-			while (openBracket) {
-				
+		std::istringstream iss(line);
+		std::string word;
+		while (iss >> word) {
+			if (!word.empty() && word[0] == '#')
+				break ;
+			else if (!word.empty() && word.back() == ';') {
+				word.pop_back();
+				tokens.push_back(word);
+				tokens.push_back(";");
+			}
+			else {
+				tokens.push_back(word);
 			}
 		}
-		else {
-			while (iss >> token) {
-				serverTokens.push_back(token);
-			}
-		}
-		serverTokensVector.push_back(serverTokens);
-		serverTokens.clear();
 	}
-}
-
-std::map<int, WebServ>	configFileParser(std::string filename) {
-
+	return tokens;
 }

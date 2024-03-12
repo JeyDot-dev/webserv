@@ -6,7 +6,7 @@
 /*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/10 11:20:53 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2024/03/11 15:58:06 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/12 12:31:47 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,8 @@
 #include "WebServ.hpp"
 
 WebServ::WebServ(void) : 
-	_port(), 
+	_port(),
+	_host(""),
 	_client_max_body_size(0),
 	_server_name(""),
 	_access_log(""),
@@ -27,6 +28,7 @@ WebServ::WebServ(void) :
 
 WebServ::WebServ(WebServ const &other) : 
 	_port(other._port),
+	_host(other._host),
 	_client_max_body_size(other._client_max_body_size),
 	_server_name(other._server_name),
 	_access_log(other._access_log),
@@ -44,6 +46,7 @@ WebServ::~WebServ(void) {
 WebServ	&WebServ::operator=(WebServ const &other) {
 	if (this != &other) {
 		_port = other._port;
+		_host = other._host;
 		_client_max_body_size = other._client_max_body_size;
 		_server_name = other._server_name;
 		_access_log = other._access_log;

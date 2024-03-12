@@ -6,7 +6,7 @@
 /*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/10 11:20:44 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2024/03/11 15:59:57 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/12 12:31:07 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ class WebServ {
 
 	private:
 		std::vector<unsigned int>		_port;
+		std::string						_host;
 		unsigned int					_client_max_body_size;
 		std::string						_server_name;
 		std::string						_access_log;

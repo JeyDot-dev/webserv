@@ -69,3 +69,132 @@ void	handleListen(WebServ &server, std::vector<std::string> tokens) {
 		server.setPort(port);
 	}
 }
+
+
+
+
+
+static void	printTokenUntilSemicolon(std::vector<std::string> tokens) {
+	while (token != end) {
+		std::cout << " " << *token++;
+		if (*token == ";") {
+			token++;
+			break ;
+		}
+	}
+	std::cout << std::endl;
+}
+
+static void	handleListen(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleListen: ";
+	printTokenUntilSemicolon(token);
+}
+
+static void	handleServerName(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleServerName";
+	printTokenUntilSemicolon(token);
+}
+
+static void	handleAccesLog(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleAccesLog";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleErrorLog(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleErrorLog";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleErrorPage(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleErrorPage";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleRoot(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleRoot";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleIndex(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleIndex";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleClientMaxBodySize(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleClientMaxBodySize";
+	printTokenUntilSemicolon(token);
+
+}
+
+static void	handleLocation(ServerConfig &config, std::vector<std::string> tokens) {
+	(void)config;
+	std::cout << "handleLocation";
+	printTokenUntilSemicolon(token);
+}
+
+static void	serverConfigSwitcher(int i, std::vector<std::string> tokens, ServerConfig &config) {
+	std::cout << "Switcher called" << std::endl;
+	switch (i) {
+		case 0:
+			handleListen(config, token);
+			break;
+		case 1:
+			handleServerName(config, token);
+			break;
+		case 2:
+			handleAccesLog(config, token);
+			break;
+		case 3:
+			handleErrorLog(config, token);
+			break;
+		case 4:
+			handleErrorPage(config, token);
+			break;
+		case 5:
+			handleRoot(config, token);
+			break;
+		case 6:
+			handleIndex(config, token);
+			break;
+		case 7:
+			handleClientMaxBodySize(config, token);
+			break;
+		case 8:
+			handleLocation(config, token);
+			break;
+		default:
+			break;
+	}
+}
+
+static void	tokenNotRecognized(std::vector<std::string> tokens) {
+	std::ofstream	outFile("log/parsing.log");
+	std::cout << "token not recognized called for: " << *token << std::endl;
+	outFile << std::endl;
+}
+
+ServerConfig::ServerConfig(std::vector<std::string> tokens) {
+	// bool bracketBlock = true;
+	while (token != end) {
+		std::cout << "Token: " << *token << std::endl;
+		for (int i = 0; i < stringArraySize(server_config); i++) {
+			if (*token == server_config[i])
+				serverConfigSwitcher(i, token, *this);
+			else
+				tokenNotRecognized(token);
+		}
+	}
+}

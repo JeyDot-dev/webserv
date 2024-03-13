@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ServerConfig.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
+/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/12 16:25:31 by lsohler           #+#    #+#             */
-/*   Updated: 2024/03/12 19:49:06 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/13 17:23:51 by lsohler@stu      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ class ServerConfig {
 	public:
 		ServerConfig(void);
 		ServerConfig(ServerConfig const &other);
-		// ServerConfig(std::vector<std::string> tokens);
+		ServerConfig(std::vector<std::string> tokens);
 		~ServerConfig(void);
 		ServerConfig	&operator=(ServerConfig const &other);
 

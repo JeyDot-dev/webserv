@@ -15,6 +15,7 @@ public:
     static void   Accept(Socket& listening_socket, Socket& calling_socket);
 
     Socket(std::string ip, uint16_t port);
+    Socket(uint16_t port);
 	Socket(Socket const & src);
 	Socket&	operator=(Socket const& rhs);
 	Socket(void);

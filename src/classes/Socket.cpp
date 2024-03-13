@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <sstream>
 #include <sys/socket.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 //--------------Functions----------------//
 uint32_t    convertIPtoBinary(const std::string& ipAddress);
@@ -40,10 +42,41 @@ Socket::Socket(Socket const &src):  socket_fd(src.socket_fd), sockaddr(src.socka
 {
 }
 
+Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
+                                                sockaddr()
+{
+    if (socket_fd < 0)
+    {
+        perror("Couldn't initialize socket || set to nonblock");
+        exit(1);
+    }
+    if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
+    {
+        perror("Couldn't initialize socket");
+        exit(1);
+    }
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_port = htons(port);
+    sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bindSocket(socket_fd, sockaddr) < 0)
+    {
+        perror("Couldn't set Socket to Non block");
+        close(socket_fd);
+        exit(1);
+    }
+    sockaddr_size = sizeof(sockaddr);
+    std::cout << "Successfully created and bound socket.\n";
+    this->showInfo();
+}
 Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
                                                 sockaddr()
 {
     if (socket_fd < 0)
+    {
+        perror("Couldn't initialize socket || set to nonblock");
+        exit(1);
+    }
+    if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
     {
         perror("Couldn't initialize socket");
         exit(1);
@@ -53,14 +86,15 @@ Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_S
     sockaddr.sin_addr.s_addr = htonl(convertIPtoBinary(ip));
     if (bindSocket(socket_fd, sockaddr) < 0)
     {
-        perror("Couldn't bind socket");
+        perror("Couldn't set Socket to Non block");
+        close(socket_fd);
         exit(1);
     }
     sockaddr_size = sizeof(sockaddr);
     std::cout << "Successfully created and bound socket.\n";
     this->showInfo();
 }
-Socket::Socket(void) :  socket_fd(0),
+Socket::Socket(void) :  socket_fd(-1),
                         sockaddr(),
                         sockaddr_size(sizeof(sockaddr))
 {

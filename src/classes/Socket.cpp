@@ -114,6 +114,11 @@ void    Socket::Accept(Socket& listening_socket, Socket& calling_socket)
         perror("couldn't accept connection");
         exit(1);
     }
+    if (fcntl(calling_socket.getFd(), F_SETFL, (fcntl(calling_socket.getFd(), F_GETFL, 0) | O_NONBLOCK) < 0))
+    {
+        perror("Couldn't initialize socket");
+        exit(1);
+    }
 }
 std::string addrToString(uint32_t ip)
 {

@@ -9,15 +9,15 @@ PUR	= \033[35m
 CYN	= \033[36m
 LGR	= \033[37m
 RST	= \033[0m
-NAME		:=	webserv
+NAME		:=	bin/cgi_test.cgi
 UNAME_S 	:= $(shell uname -s)
 #---------------Directories----------------------
 SRC_D		:=	src/
 BUILD_D		:=	.build/
 LIB_D		:=	
 #---------------SRCs and Libs-(mac)\/--------------
-SRC			:=	main.cpp
-SRC_CLASSES	:=	Socket.cpp
+SRC			:=	test.cpp	
+SRC_CLASSES	:=	
 INC			:=	inc/ inc/classes/
 LIB			:=
 FRAMEWORK	:=
@@ -54,11 +54,11 @@ MAKEFLAGS   += --no-print-directory
 all		:	$(NAME)
 #-----------------------------NAME-----------------------------------
 $(NAME)	:	$(OBJ)
-			$(MAKE) -C cgi
 			TOTAL_OBJ=$(find .build -name "*.o")
 			echo "currently $(TOTAL_OBJ) objects out of $(TOTAL_OBJ) are compiled"
 #			$(MAKE) complib
 			${CC} $(LDFLAGS) $(OBJ) $(LDLIBS) $(LDFMWK) -o $(NAME)
+			chmod 755 $(NAME)
 			$(info MAKING $(NAME).....)
 			echo "\033[5;32m\t\tFinished compiling $(NAME) !!! $(RST)"
 #------------------------OBJ COMPILATION-----------------------------
@@ -83,7 +83,7 @@ $(BUILD_D)%.o	:	$(SRC_D)%.cpp
 #----------------------------CLEAN-----------------------------------
 clean	:
 	$(RM) $(OBJ) $(DEPS)
-	$(MAKE) -C cgi clean
+#	$(MAKE) -C libft clean
 #ifeq ($(UNAME_S),Darwin)
 #	$(MAKE) -C mlx-opengl clean
 #else
@@ -92,9 +92,9 @@ clean	:
 	echo "$(CYN) \t\tALL CLEANED $(RST)"
 #----------------------------FCLEAN----------------------------------
 fclean	:
-	$(MAKE) -C cgi fclean
 	$(RM) $(OBJ) $(DEPS)
 	$(RM) $(NAME)
+#	$(MAKE) -C libft fclean
 #ifeq ($(UNAME_S),Darwin)
 #	$(MAKE) -C mlx-opengl fclean
 #else
@@ -105,7 +105,6 @@ fclean	:
 re		:	fclean all
 			echo "\033[5;33m \t\tALL RECOMPILED !!! $(RST)"
 test	:	all
-			./webserv 8080
 
 setup	:	
 			mkdir -p inc/classes

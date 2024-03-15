@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ConfigParser.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
+/*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/10 11:14:07 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2024/03/13 19:46:16 by lsohler@stu      ###   ########.fr       */
+/*   Updated: 2024/03/15 17:45:07 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,13 +76,12 @@ std::vector<std::string>	configFileTokenizer(std::string filename) {
 
 std::vector<std::vector<std::string> >	getTokensBlock(std::vector<std::string> tokens) {
 	std::vector<std::vector<std::string> > tokens_block;
+	std::vector<std::string>::iterator it = tokens.begin();
 
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); ++it) {
-		// std::cout << "Tok: " << *it << std::endl;
+	while (it != tokens.end()) {
+		// std::cout << "========Tok " << *it << std::endl;
 		if (*it == "server" && *(++it) == "{" && ++it != tokens.end()) {
 			std::vector<std::string>	vector;
-			// it++;
-			// it++;
 			int	bracket_counter = 1;
 			while (it != tokens.end() && bracket_counter) {
 				// std::cout << "Tok2: " << *it << std::endl;
@@ -111,8 +110,11 @@ std::map<std::string, WebServ>	configFileParser(std::string filename) {
 	std::map<std::string, WebServ>	servers;
 
 	for (std::vector<std::vector<std::string> >::iterator it = tokens_block.begin(); it != tokens_block.end(); it++) {
+		std::cout << "Tokens server: ";
+		printTokens(*it);
 		std::cout << "------------New Server------------" << std::endl;
 		ServerConfig	new_config(*it);
+		new_config.printServerConfig();
 	}
 	return servers;
 }

@@ -42,7 +42,7 @@ CC			:=	c++
 DIR_DUP     =	mkdir -p "$(@D)"
 #-MMD -MP = Used to add dependencies during precomp. (for .h)
 CPPFLAGS    :=	-MMD -MP $(addprefix -I,$(INC))
-CFLAGS		:=	-Wextra -Werror -Wall -std=c++98 -pedantic
+CFLAGS		:=	-Wextra -Werror -Wall -std=c++98 -pedantic -g
 # -(r)eplace the older objects, -(c)reate if no lib, -s index stuff
 AR          :=	ar
 ARFLAGS     :=	-r -c -s

@@ -198,3 +198,72 @@ ServerConfig::ServerConfig(std::vector<std::string> tokens) {
 		}
 	}
 }
+
+
+
+
+void	handleLocation(ServerConfig &config, std::vector<std::string> &tokens) {
+	Route	new_route;
+
+	new_route.root = "";
+	new_route.cgi = "";
+	new_route.upload = "";
+	new_route.access = true;
+	tokens.erase(tokens.begin());
+	if (!tokens.empty()) {
+		new_route.location = *tokens.begin();
+		tokens.erase(tokens.begin());
+		tokens.erase(tokens.begin());
+	}
+	while (!tokens.empty() && *tokens.begin() != "}") {
+		std::cout << "TEST: " << *tokens.begin() << std::endl;
+		for (int i = 0; i < stringArraySize(location_config); i++) {
+			if (!tokens.empty() && *tokens.begin() == location_config[i]) {
+				std::cout << "before erase token: " << *tokens.begin() << std::endl;
+				tokens.erase(tokens.begin());
+				switch (i) {
+					case 0:
+						while (!tokens.empty() && *tokens.begin() != ";") {
+							new_route.methods.push_back(*tokens.begin());
+							tokens.erase(tokens.begin());
+						}
+						break;
+					case 1:
+						new_route.root = *tokens.begin();
+						break;
+					case 2:
+						new_route.cgi = *tokens.begin();
+						break;
+					case 3:
+						new_route.upload = *tokens.begin();
+						break;
+					case 4:
+						if (*tokens.begin() == "true" || *tokens.begin() == "yes")
+							new_route.access = true;
+						else
+							new_route.access = false;
+						break;
+					default:
+						break;
+				}
+			}
+			if (*tokens.begin() == ";") {
+				tokens.erase(tokens.begin());
+				break ;
+			}
+		}
+		while (!tokens.empty() && *tokens.begin() != ";" && *tokens.begin() != "}") {
+			std::cout << "While erase: " << *tokens.begin() << std::endl;
+			tokens.erase(tokens.begin());
+			if (*tokens.begin() == ";") {
+				tokens.erase(tokens.begin());
+				break ;
+			}
+		}
+	}
+	std::cout << std::endl;
+	if (*tokens.begin() == "}") {
+		tokens.erase(tokens.begin());
+	}
+	config.setRoutes(new_route);
+}

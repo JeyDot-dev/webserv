@@ -1,14 +1,83 @@
 #include "Webserv.hpp"
 #include <bits/types/struct_timeval.h>
+#include <cstring>
+#include <fstream>
 #include <iostream>
 #include <Socket.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <sstream>
 #include <sys/select.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <map>
 
 //--------------Functions----------------//
+char** create_exec_args(const std::vector<std::string>& args)
+{
+    char** exec_args = reinterpret_cast<char**>(malloc(sizeof(char*) * (args.size() + 1)));
+    if (!exec_args)
+        return NULL;
+    for (size_t i = 0; i < args.size(); ++i)
+    {
+        exec_args[i] = strdup(args[i].c_str());
+        if (!exec_args[i])
+        {
+            for (size_t j = 0; j < i; ++j)
+                free(exec_args[j]);
+            free(exec_args);
+            return NULL;
+        }
+    }
+    exec_args[args.size()] = NULL;
+    return exec_args;
+}
+
+void free_exec_args(char** exec_args)
+{
+    if (!exec_args)
+        return;
+    for (char** p = exec_args; *p; ++p)
+        free(*p);
+    free(exec_args);
+}
+int     Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
+{
+    char** tmp = create_exec_args(args);
+    int status = 0;
+    int child = 0;
+//    int pipe_fd[2];
+//    if (pipe(pipe_fd) == -1)
+//    {
+//    perror("pipe in executCgi");
+//    exit(EXIT_FAILURE);
+//    }
+    child = fork();
+    if (child == 0)
+    {
+        if (dup2(fd, STDOUT_FILENO) == -1)
+        {
+            perror("dup2 in child");
+            exit(EXIT_FAILURE);
+        }
+        execve(path.c_str(), tmp, envp); 
+        perror("execve");
+        exit(1);
+    }
+    if (waitpid(child, &status, 0) == -1)
+    {
+        perror("waitpid");
+        exit(EXIT_FAILURE);
+    }
+    if (!WIFEXITED(status) || WEXITSTATUS(status))
+    {
+        std::cerr << "Child terminated abnormally" << std::endl;
+        return -1;
+    }
+    free_exec_args(tmp);
+    return 0;
+}
 void    Webserv::_closeFds()
 {
     for (int i = 0; i < _max_fd; i++)
@@ -19,6 +88,20 @@ void    Webserv::_closeFds()
 }
 void    Webserv::_sendResponse(int fd, std::string response)
 {
+    /*      CGI TEST
+    response = "ET OUI MEME T'ES BIEN MOUCHEE";
+    std::string                 path("cgi/bin/cgi_test.cgi");
+    std::vector<std::string>    args;
+    args.push_back("cgi_test.cgi");
+    _executeCgi(fd, path, args);
+    */
+    std::ifstream       in("test.html");
+    std::stringstream   buff;
+    buff << in.rdbuf();
+    in.close();
+
+    response = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
+    response += buff.str();
     if ((write(fd, response.c_str(), response.size())) == -1)
     {
         perror("write in send_response");
@@ -86,7 +169,7 @@ void    Webserv::serverLoop()
                     if ((request = _getRequest(i)).empty())
                         continue;
                     //TODO Process request;
-                    //std::cout << http_request << std::endl;
+                    std::cout << request << std::endl;
                     _sendResponse(i, _default_response);
                 }
             }

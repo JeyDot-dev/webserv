@@ -6,6 +6,7 @@
 #define TIMEOUT_SEC 8
 #include <iostream>
 #include <sys/select.h>
+#include <vector>
 #include <map>
 #include "Socket.hpp"
 class	Webserv
@@ -17,8 +18,12 @@ public:
 	Webserv(void);
 	~Webserv(void);
 
+    char**                  envp;
+
 private:
-    //Socket/ Client connect, Accept, Respond---
+    //Response stuff
+    int                     _executeCgi(int fd, std::string path, std::vector<std::string> args);
+    //Socket/ Client connect, Accept, Respond--
     std::string             _getRequest(int fd);
     void                    _closeFds();
     void                    _sendResponse(int fd, std::string response);

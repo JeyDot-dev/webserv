@@ -119,6 +119,7 @@ void    Socket::Accept(Socket& listening_socket, Socket& calling_socket)
         perror("Couldn't initialize socket");
         exit(1);
     }
+    std::cout << "ACCEPTED: "; calling_socket.showInfo();
 }
 std::string addrToString(uint32_t ip)
 {

@@ -35,3 +35,4 @@
 .*.swp
 compile_commands.json
 *.idx
+.DS_Store

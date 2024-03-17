@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <map>
+#include "ServerConfig.hpp"
 
 //--------------Functions----------------//
 char** create_exec_args(const std::vector<std::string>& args)
@@ -182,11 +183,14 @@ Webserv&	Webserv::operator=(Webserv const&  rhs)
 {
 	if (this != &rhs)
 	{
-		//copy
+		_config = rhs._config;
 	}
 	return *this;
 }
 //--------------Constructors------------//
+Webserv::Webserv(ServerConfig &new_config) {
+	_config = new_config;
+}
 Webserv::Webserv(int port) : _sock_serv(port), _default_response("\
 HTTP/1.1 200 OK\n\
 Content-Type: text/plain\n\
@@ -207,12 +211,10 @@ Webserv::Webserv(Webserv const &src)
 	*this = src;
 	return ;
 }
-
 Webserv::Webserv(void)
 {
 	return ;
 }
-
 Webserv::~Webserv(void)
 {
 	return ;

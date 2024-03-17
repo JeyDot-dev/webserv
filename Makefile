@@ -16,8 +16,8 @@ SRC_D		:=	src/
 BUILD_D		:=	.build/
 LIB_D		:=	
 #---------------SRCs and Libs-(mac)\/--------------
-SRC			:=	main.cpp
-SRC_CLASSES	:=	Socket.cpp Webserv.cpp
+SRC			:=	main.cpp config_parser.cpp
+SRC_CLASSES	:=	Socket.cpp Webserv.cpp ServerConfig.cpp
 INC			:=	inc/ inc/classes/
 LIB			:=
 FRAMEWORK	:=

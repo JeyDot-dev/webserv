@@ -9,18 +9,22 @@
 #include <vector>
 #include <map>
 #include "Socket.hpp"
+#include "ServerConfig.hpp"
+#include <string>
 class	Webserv
 {
-
 public:
     void    serverLoop();
-    Webserv(int port);
+    
 	Webserv(void);
+    Webserv(int port);
+	Webserv(ServerConfig &new_config);
 	~Webserv(void);
 
     char**                  envp;
 
 private:
+	ServerConfig            _config;
     //Response stuff
     int                     _executeCgi(int fd, std::string path, std::vector<std::string> args);
     //Socket/ Client connect, Accept, Respond--

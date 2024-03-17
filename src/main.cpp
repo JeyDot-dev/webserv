@@ -2,7 +2,7 @@
 #include "ServerConfig.hpp"
 #include <cstdlib>
 
-//std::map<std::string, Webserv>	configFileParser(std::string filename);
+std::map<std::string, Webserv>	configFileParser(std::string filename);
 int main(int ac, char **av, char** envp)
 {
 	if (ac != 2)

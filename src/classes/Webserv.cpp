@@ -14,35 +14,10 @@
 #include <map>
 #include "ServerConfig.hpp"
 
+char** create_exec_args(const std::vector<std::string>& args);
+void free_exec_args(char** exec_args);
 //--------------Functions----------------//
-char** create_exec_args(const std::vector<std::string>& args)
-{
-    char** exec_args = reinterpret_cast<char**>(malloc(sizeof(char*) * (args.size() + 1)));
-    if (!exec_args)
-        return NULL;
-    for (size_t i = 0; i < args.size(); ++i)
-    {
-        exec_args[i] = strdup(args[i].c_str());
-        if (!exec_args[i])
-        {
-            for (size_t j = 0; j < i; ++j)
-                free(exec_args[j]);
-            free(exec_args);
-            return NULL;
-        }
-    }
-    exec_args[args.size()] = NULL;
-    return exec_args;
-}
 
-void free_exec_args(char** exec_args)
-{
-    if (!exec_args)
-        return;
-    for (char** p = exec_args; *p; ++p)
-        free(*p);
-    free(exec_args);
-}
 int     Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
 {
     char** tmp = create_exec_args(args);
@@ -184,6 +159,12 @@ Webserv&	Webserv::operator=(Webserv const&  rhs)
 	if (this != &rhs)
 	{
 		_config = rhs._config;
+        _sock_serv = rhs._sock_serv;
+        _sock_clients = rhs._sock_clients;
+        _client_fd_set = rhs._client_fd_set;
+        _max_fd = rhs._max_fd;
+        _default_response = rhs._default_response;
+        envp = rhs.envp;
 	}
 	return *this;
 }
@@ -220,3 +201,30 @@ Webserv::~Webserv(void)
 	return ;
 }
 //--------------Non-Member--------------//
+char** create_exec_args(const std::vector<std::string>& args)
+{
+    char** exec_args = reinterpret_cast<char**>(malloc(sizeof(char*) * (args.size() + 1)));
+    if (!exec_args)
+        return NULL;
+    for (size_t i = 0; i < args.size(); ++i)
+    {
+        exec_args[i] = strdup(args[i].c_str());
+        if (!exec_args[i])
+        {
+            for (size_t j = 0; j < i; ++j)
+                free(exec_args[j]);
+            free(exec_args);
+            return NULL;
+        }
+    }
+    exec_args[args.size()] = NULL;
+    return exec_args;
+}
+void free_exec_args(char** exec_args)
+{
+    if (!exec_args)
+        return;
+    for (char** p = exec_args; *p; ++p)
+        free(*p);
+    free(exec_args);
+}

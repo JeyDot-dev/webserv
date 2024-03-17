@@ -16,6 +16,8 @@ class	Webserv
 public:
     void    serverLoop();
     
+	Webserv&	operator=(Webserv const& rhs);
+
 	Webserv(void);
     Webserv(int port);
 	Webserv(ServerConfig &new_config);
@@ -32,6 +34,7 @@ private:
     std::string             _getRequest(int fd);
     void                    _closeFds();
     void                    _sendResponse(int fd, std::string response);
+
     Socket                  _sock_serv;
     std::map<int, Socket>   _sock_clients;
     fd_set                  _client_fd_set;
@@ -39,7 +42,6 @@ private:
     std::string             _default_response;
     //------------------------------------------
 
-	Webserv&	operator=(Webserv const& rhs);
 };
 
 #endif

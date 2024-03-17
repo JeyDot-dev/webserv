@@ -19,6 +19,7 @@ public:
 	Webserv(void);
     Webserv(int port);
 	Webserv(ServerConfig &new_config);
+	Webserv(Webserv const & src);
 	~Webserv(void);
 
     char**                  envp;
@@ -38,7 +39,6 @@ private:
     std::string             _default_response;
     //------------------------------------------
 
-	Webserv(Webserv const & src);
 	Webserv&	operator=(Webserv const& rhs);
 };
 

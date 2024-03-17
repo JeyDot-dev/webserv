@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "WebServ.hpp"
+#include "Webserv.hpp"
 
 void	printTokens(std::vector<std::string> tokens) {
 	std::cout << "Tokens: ";
@@ -57,8 +57,8 @@ std::vector<std::string>	configFileTokenizer(std::string filename) {
 		while (iss >> word) {
 			if (!word.empty() && word[0] == '#')
 				break ;
-			else if (!word.empty() && word.back() == ';') {
-				word.pop_back();
+			else if (!word.empty() && word.length() > 1 && (word[word.length() - 1]) == ';') {
+				word.erase(word.length() - 1, 1);
 				tokens.push_back(word);
 				tokens.push_back(";");
 			}
@@ -105,9 +105,9 @@ std::vector<std::vector<std::string> >	getTokensBlock(std::vector<std::string> t
 	return tokens_block;
 }
 
-std::map<std::string, WebServ>	configFileParser(std::string filename) {
+std::map<std::string, Webserv>	configFileParser(std::string filename) {
 	std::vector<std::vector<std::string> >	tokens_block = getTokensBlock(configFileTokenizer(filename));
-	std::map<std::string, WebServ>	servers;
+	std::map<std::string, Webserv>	servers;
 
 	for (std::vector<std::vector<std::string> >::iterator it = tokens_block.begin(); it != tokens_block.end(); it++) {
 		std::cout << "Tokens server: ";

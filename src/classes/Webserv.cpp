@@ -1,5 +1,6 @@
 #include "Webserv.hpp"
-#include <bits/types/struct_timeval.h>
+//#include <bits/types/struct_timeval.h>
+#include <sys/time.h>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -62,7 +63,7 @@ void    Webserv::_closeFds()
             close(i);
     }
 }
-void    Webserv::_sendResponse(int fd, std::string response)
+void    Webserv::_sendResponse(int fd, std::string response, std::string path, std::string file, std::string mime_type)
 {
     /*      CGI TEST
     response = "ET OUI MEME T'ES BIEN MOUCHEE";
@@ -71,12 +72,23 @@ void    Webserv::_sendResponse(int fd, std::string response)
     args.push_back("cgi_test.cgi");
     _executeCgi(fd, path, args);
     */
-    std::ifstream       in("test.html");
+
+    if (_static_folders.find(path) == _static_folders.end())
+	{
+		std::cerr << "Path not found:" << path << std::endl;
+		return;
+	}
+
+	if (file.empty())
+		file = "index.html";
+    std::ifstream       in(_static_folders[path] + file);
     std::stringstream   buff;
     buff << in.rdbuf();
     in.close();
 
-    response = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
+    response = "HTTP/1.1 200 OK\nContent-Type: ";
+	response += mime_type;
+	response += "\n\n";
     response += buff.str();
     if ((write(fd, response.c_str(), response.size())) == -1)
     {
@@ -106,6 +118,61 @@ std::string Webserv::_getRequest(int fd)
     }
     return ret;
 }
+
+bool ends_with(const std::string& value, const std::string& ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+std::string getMimeType(const std::string& path)
+{
+	if (path.empty())
+		return "text/html";
+    if (ends_with(path, ".css"))
+        return "text/css";
+	if (ends_with(path, ".html"))
+		return "text/html";
+	if (ends_with(path, ".js"))
+		return "text/javascript";
+    return "text/plain";
+}
+
+Request parseRequest(std::string request)
+{
+	Request         ret;
+
+	//DEBUG:
+	//std::cout << "Request: " << request << std::endl;
+
+	ret.method = request.substr(0, request.find(' ')); //Par exemple GET
+	request = request.substr(request.find(' ') + 1); //On enleve le GET
+	ret.path = request.substr(0, request.find(' ')); //On recupere le path
+	request = request.substr(request.find(' ') + 1); //On enleve le path
+	ret.version = request.substr(0, request.find('\n')); //On recupere la version
+	request = request.substr(request.find('\n') + 1); //On enleve la version
+	while (request.find(":") != std::string::npos)
+	{
+		std::string key = request.substr(0, request.find(":"));
+		request = request.substr(request.find(":") + 1);
+		std::string value = request.substr(0, request.find("\n"));
+		request = request.substr(request.find("\n") + 1);
+		ret.headers.insert(std::pair<std::string, std::string>(key, value));
+	}
+	ret.body = request; //On recupere le body (c'est tout ce qui reste)
+
+	ret.folder = ret.path.substr(0, ret.path.find_last_of('/'));
+	ret.folder += "/";
+	ret.file = ret.path.substr(ret.path.find_last_of('/') + 1);
+	ret.mime_type = getMimeType(ret.file);
+
+	//DEBUG:
+	std::cout << "Path: " << ret.path << std::endl;
+	std::cout << "Method: " << ret.mime_type << std::endl;
+
+	return ret;
+}
+
 void    Webserv::serverLoop()
 {
     struct timeval  timeout;
@@ -144,15 +211,20 @@ void    Webserv::serverLoop()
                 {
                     if ((request = _getRequest(i)).empty())
                         continue;
-                    //TODO Process request;
-                    std::cout << request << std::endl;
-                    _sendResponse(i, _default_response);
+					Request req = parseRequest(request);
+                    _sendResponse(i, _default_response, req.folder, req.file, req.mime_type);
                 }
             }
         }
     }
     _closeFds();
 }
+
+void Webserv::use(std::string path, std::string root)
+{
+	_static_folders.insert(std::pair<std::string, std::string>(path, root));
+}
+
 //--------------Operators----------------//
 Webserv&	Webserv::operator=(Webserv const&  rhs)
 {

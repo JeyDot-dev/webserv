@@ -250,7 +250,11 @@ void send_file(int fd, const std::string& path, const std::string& mime_type)
 	buff << in.rdbuf();
 	in.close();
 	
-	std::string response = "HTTP/1.1 200 OK\nContent-Type: ";
+	std::string response = "HTTP/1.1 200 OK\n\
+	Access-Control-Allow-Origin: *\n\
+	Content-Length: ";
+	response += std::to_string(buff.str().size());
+	response += "\nContent-Type: ";
 	response += mime_type;
 	response += "\n\n";
 	response += buff.str();
@@ -289,7 +293,6 @@ Webserv::Webserv(ServerConfig &new_config) {
 Webserv::Webserv(int port) : _sock_serv(port), _default_response("\
 HTTP/1.1 200 OK\n\
 Content-Type: text/plain\n\
-Access-Control-Allow-Origin: *\n\
 Content-Length: 12\n\n\
 ERROR 404!")
 {

@@ -1,6 +1,7 @@
 #include "Webserv.hpp"
 //#include <bits/types/struct_timeval.h>
 #include <sys/time.h>
+#include <csignal>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -14,10 +15,11 @@
 #include <unistd.h>
 #include <map>
 #include "ServerConfig.hpp"
-
-char** create_exec_args(const std::vector<std::string>& args);
-void free_exec_args(char** exec_args);
 //--------------Functions----------------//
+void    sigint_handler(int signal);
+char**  create_exec_args(const std::vector<std::string>& args);
+void    free_exec_args(char** exec_args);
+volatile sig_atomic_t   flag = 0;
 
 int     Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
 {
@@ -60,7 +62,10 @@ void    Webserv::_closeFds()
     for (int i = 0; i < _max_fd; i++)
     {
         if (FD_ISSET(i, &_client_fd_set))
+        {
             close(i);
+            FD_CLR(i, &_client_fd_set);
+        }
     }
 }
 void    Webserv::_sendResponse(int fd, std::string response, std::string path, std::string file, std::string mime_type)
@@ -180,7 +185,9 @@ void    Webserv::serverLoop()
     Socket          tmp_socket;
     fd_set          tmp_fd_set;
     ssize_t         tmp_ret_value;
-    while (true)
+
+    signal(SIGINT, sigint_handler);
+    while (!flag)
     {
         tmp_fd_set = _client_fd_set;
         timeout.tv_sec = TIMEOUT_SEC;
@@ -215,6 +222,8 @@ void    Webserv::serverLoop()
                     _sendResponse(i, _default_response, req.folder, req.file, req.mime_type);
                 }
             }
+            if (flag)
+                break;
         }
     }
     _closeFds();
@@ -299,4 +308,9 @@ void free_exec_args(char** exec_args)
     for (char** p = exec_args; *p; ++p)
         free(*p);
     free(exec_args);
+}
+void    sigint_handler(int signal)
+{
+    std::cout << "Stopping server, sigint:" << signal<<std::endl;
+    flag = 1;
 }

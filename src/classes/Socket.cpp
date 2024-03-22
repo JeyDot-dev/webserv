@@ -47,20 +47,27 @@ Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
 {
     if (socket_fd < 0)
     {
-        perror("Couldn't initialize socket || set to nonblock");
+        perror("Couldn't initialize socket");
         exit(1);
     }
     if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
     {
-        perror("Couldn't initialize socket");
+        perror("Couldn't set socket to non block");
         exit(1);
     }
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    int reuse = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    {
+        perror("Couldn't set reuse flag");
+        close(socket_fd);
+        exit(1);
+    }
     if (bindSocket(socket_fd, sockaddr) < 0)
     {
-        perror("Couldn't set Socket to Non block");
+        perror("Couldn't bind socket");
         close(socket_fd);
         exit(1);
     }
@@ -73,12 +80,19 @@ Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_S
 {
     if (socket_fd < 0)
     {
-        perror("Couldn't initialize socket || set to nonblock");
+        perror("Couldn't initialize socket");
+        exit(1);
+    }
+    int reuse = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    {
+        perror("Couldn't set reuse flag");
+        close(socket_fd);
         exit(1);
     }
     if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
     {
-        perror("Couldn't initialize socket");
+        perror("Couldn't set socket to non block");
         exit(1);
     }
     sockaddr.sin_family = AF_INET;
@@ -86,7 +100,7 @@ Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_S
     sockaddr.sin_addr.s_addr = htonl(convertIPtoBinary(ip));
     if (bindSocket(socket_fd, sockaddr) < 0)
     {
-        perror("Couldn't set Socket to Non block");
+        perror("Couldn't bind socket");
         close(socket_fd);
         exit(1);
     }
@@ -116,7 +130,7 @@ void    Socket::Accept(Socket& listening_socket, Socket& calling_socket)
     }
     if (fcntl(calling_socket.getFd(), F_SETFL, (fcntl(calling_socket.getFd(), F_GETFL, 0) | O_NONBLOCK) < 0))
     {
-        perror("Couldn't initialize socket");
+        perror("Couldn't bind socket");
         exit(1);
     }
     std::cout << "ACCEPTED: "; calling_socket.showInfo();

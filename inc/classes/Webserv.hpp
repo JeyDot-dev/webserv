@@ -68,4 +68,7 @@ private:
 
 };
 
+void send_file(int fd, const std::string& path, const std::string& mime_type);
+bool file_exists(const std::string& filename);
+
 #endif

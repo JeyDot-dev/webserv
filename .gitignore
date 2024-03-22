@@ -36,3 +36,7 @@
 compile_commands.json
 *.idx
 .DS_Store
+.build
+.vscode
+*.vscode
+*.vs

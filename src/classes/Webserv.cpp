@@ -78,7 +78,9 @@ void    Webserv::_sendResponse(int fd, std::string response, std::string path, s
     _executeCgi(fd, path, args);
     */
 
-    if (_static_folders.find(path) == _static_folders.end())
+
+
+	if (_static_folders.find(path) == _static_folders.end())
 	{
 		std::cerr << "Path not found:" << path << std::endl;
 		return;
@@ -86,21 +88,24 @@ void    Webserv::_sendResponse(int fd, std::string response, std::string path, s
 
 	if (file.empty())
 		file = "index.html";
-    std::ifstream       in(_static_folders[path] + file);
-    std::stringstream   buff;
-    buff << in.rdbuf();
-    in.close();
+   
+   std::string file_path = _static_folders[path] + file;
+		
+	if (_static_folders.find(path) == _static_folders.end()
+		|| _static_folders[path].empty()
+		|| mime_type.empty()
+		|| !file_exists(file_path))
+	{
+		std::cerr << "Path empty:" << path << std::endl;
+		write(fd, response.c_str(), response.size());
+		return;
+	}
 
-    response = "HTTP/1.1 200 OK\nContent-Type: ";
-	response += mime_type;
-	response += "\n\n";
-    response += buff.str();
-    if ((write(fd, response.c_str(), response.size())) == -1)
-    {
-        perror("write in send_response");
-        exit(EXIT_FAILURE);
-    }
-    _sock_clients[fd].showInfo();
+	send_file(fd, file_path, mime_type);
+
+	//_sock_clients[fd].showInfo();
+	close(fd);
+	FD_CLR(fd, &_client_fd_set);
 }
 std::string Webserv::_getRequest(int fd)
 {
@@ -140,6 +145,10 @@ std::string getMimeType(const std::string& path)
 		return "text/html";
 	if (ends_with(path, ".js"))
 		return "text/javascript";
+	if (ends_with(path, ".jpg") || ends_with(path, ".jpeg"))
+		return "image/jpeg";
+	if (ends_with(path, ".png"))
+		return "image/png";
     return "text/plain";
 }
 
@@ -172,8 +181,8 @@ Request parseRequest(std::string request)
 	ret.mime_type = getMimeType(ret.file);
 
 	//DEBUG:
-	std::cout << "Path: " << ret.path << std::endl;
-	std::cout << "Method: " << ret.mime_type << std::endl;
+	// std::cout << "Path: " << ret.path << std::endl;
+	// std::cout << "Method: " << ret.mime_type << std::endl;
 
 	return ret;
 }
@@ -234,6 +243,30 @@ void Webserv::use(std::string path, std::string root)
 	_static_folders.insert(std::pair<std::string, std::string>(path, root));
 }
 
+void send_file(int fd, const std::string& path, const std::string& mime_type)
+{
+	std::ifstream       in(path, std::ios::in | std::ios::binary);
+	std::stringstream   buff;
+	buff << in.rdbuf();
+	in.close();
+	
+	std::string response = "HTTP/1.1 200 OK\nContent-Type: ";
+	response += mime_type;
+	response += "\n\n";
+	response += buff.str();
+	if ((write(fd, response.c_str(), response.size())) == -1)
+	{
+		perror("write in send_response");
+		exit(EXIT_FAILURE);
+	}
+}
+
+bool file_exists(const std::string& filename)
+{
+    std::ifstream file(filename);
+    return file.good();
+}
+
 //--------------Operators----------------//
 Webserv&	Webserv::operator=(Webserv const&  rhs)
 {
@@ -256,8 +289,9 @@ Webserv::Webserv(ServerConfig &new_config) {
 Webserv::Webserv(int port) : _sock_serv(port), _default_response("\
 HTTP/1.1 200 OK\n\
 Content-Type: text/plain\n\
+Access-Control-Allow-Origin: *\n\
 Content-Length: 12\n\n\
-Hello world!")
+ERROR 404!")
 {
     if (listen(_sock_serv.getFd(), 1) < 0)
     {

@@ -62,7 +62,7 @@ header {
 	justify-content: center;
 	text-align: center;
 	height: 21rem;
-	background-image: url("../IMG/bckg.png");
+	background-image: url("/IMG/bckg.png");
 	background-size: cover;
 	background-position: center;
 }

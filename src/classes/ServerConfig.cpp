@@ -6,7 +6,7 @@
 /*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/12 16:26:12 by lsohler           #+#    #+#             */
-/*   Updated: 2024/03/26 14:16:24 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/26 14:25:56 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,7 @@ void	handleListen(ServerConfig &config, std::vector<std::string> &tokens) {
 void	handleClientMaxBodySize(ServerConfig &config, std::vector<std::string> &tokens) {
 	tokenSetter(tokens, config, &ServerConfig::setClientMaxBodySize);
 	// (void)config;
-	std::cout << "handleClientMaxBodySize";
+	// std::cout << "handleClientMaxBodySize";
 	// printTokenUntilSemicolon(tokens);
 }
 

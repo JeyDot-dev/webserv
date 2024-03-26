@@ -74,7 +74,6 @@ private:
 	std::map<std::string, FunctionType> _post;
 	std::vector<Request>	_requests;
     //------------------------------------------
-
 };
 
 void send_file(int fd, const std::string& path, const std::string& mime_type);

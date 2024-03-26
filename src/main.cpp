@@ -15,23 +15,40 @@ void getPingRequest(Request req, int fd)
 
 int main(int ac, char **av, char** envp)
 {
+	(void)av;
+	(void)envp;
 	if (ac != 2)
 	{
 		std::cerr << "Usage: ./Webserv <config_file>" << std::endl;
 		return 1;
 	}
-	configFileParser(av[1]);
-    Webserv server(8080);
 
-	server.use("/", "./site/");
-	server.use("/CSS/", "./site/CSS/");
-	server.use("/IMG/", "./site/IMG/");
-	server.use("/JS", "./site/JS/");
+	ServerConfig config;
 
-	server.get("/api/ping", getPingRequest);
+	try
+	{
+		config.init(av[1]);
+	}
+	catch (std::exception &e)
+	{
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
+	}
 
-    server.envp = envp;    
-    server.serverLoop();
+	Webserv server(config);
+
+	server.serverLoop();
+
+	// Webserv server(8080);
+
+	// server.use("/", "./site/");
+	// server.use("/CSS/", "./site/CSS/");
+	// server.use("/IMG/", "./site/IMG/");
+
+	// server.get("/api/ping", getPingRequest);
+
+    // server.envp = envp;    
+    // server.serverLoop();
 
     return 0;
 }

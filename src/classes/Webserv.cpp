@@ -318,8 +318,37 @@ Webserv&	Webserv::operator=(Webserv const&  rhs)
 	return *this;
 }
 //--------------Constructors------------//
+
 Webserv::Webserv(ServerConfig &new_config) {
 	_config = new_config;
+
+	_sock_serv = Socket(_config.getPort());
+	if (listen(_sock_serv.getFd(), 1) < 0)
+    {
+        perror("cannot listen");
+        exit(1);
+    }
+	_max_fd = _sock_serv.getFd();
+	FD_ZERO(&_client_fd_set);
+	FD_SET(_sock_serv.getFd(), &_client_fd_set);
+	_default_response ="HTTP/1.1 404 Not Found\n\
+						Content-Type: text/html\n\n\
+						<html><body><h1>404 Not Found</h1></body></html>";
+	try {
+		std::map<std::string, std::map<std::string, std::string> > locations = _config.getLocations();
+		std::map<std::string, std::map<std::string, std::string> >::iterator it;
+		if (locations.empty())
+			throw std::runtime_error("No locations found");
+		for (it = locations.begin(); it != locations.end(); it++)
+		{
+			use(it->first, _config.getLocationValue(it->first, "root"));
+			std::cout << _config.getLocationValue(it->first, "root") << std::endl;
+		}
+	}
+	catch (std::exception &e)
+	{
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
 }
 Webserv::Webserv(int port) : _sock_serv(port), _default_response("\
 HTTP/1.1 404 Not Found\n\

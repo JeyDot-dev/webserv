@@ -3,7 +3,7 @@
 #  ifndef BUFFER_SIZE
 #   define BUFFER_SIZE 1024
 #  endif
-#define TIMEOUT_SEC 8
+#define TIMEOUT_SEC 999999
 #include <iostream>
 #include <sys/select.h>
 #include <vector>
@@ -29,7 +29,10 @@ struct Request
 	std::string     version;
 	std::map<std::string, std::string> headers;
 	std::string     body;
+	std::map<std::string, std::string> *static_folders;
 };
+
+typedef void (*FunctionType)(Request, int);
 
 class	Webserv
 {
@@ -45,6 +48,10 @@ public:
 	~Webserv(void);
 
 	void use(std::string path, std::string folder);
+	void get(std::string path, FunctionType func);
+	void getResponse(Request req, int fd);
+	void post(std::string path, FunctionType func);
+	void postResponse(Request req, int fd);
 
     char**                  envp;
 
@@ -63,6 +70,8 @@ private:
     int                     _max_fd;
     std::string             _default_response;
 	std::map<std::string, std::string> _static_folders;
+	std::map<std::string, FunctionType> _get;
+	std::map<std::string, FunctionType> _post;
 	std::vector<Request>	_requests;
     //------------------------------------------
 
@@ -70,5 +79,8 @@ private:
 
 void send_file(int fd, const std::string& path, const std::string& mime_type);
 bool file_exists(const std::string& filename);
+void res(std::string status, std::string headers, std::string body, int fd);
+void res(std::string rep, int fd);
+
 
 #endif

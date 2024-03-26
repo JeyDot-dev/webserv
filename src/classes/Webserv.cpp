@@ -20,6 +20,10 @@ void    sigint_handler(int signal);
 char**  create_exec_args(const std::vector<std::string>& args);
 void    free_exec_args(char** exec_args);
 volatile sig_atomic_t   flag = 0;
+void send_file(int fd, const std::string& path, const std::string& mime_type);
+bool file_exists(const std::string& filename);
+void res(std::string status, std::string headers, std::string body, int fd);
+void res(std::string rep, int fd);
 
 int     Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
 {
@@ -78,17 +82,12 @@ void    Webserv::_sendResponse(int fd, std::string response, std::string path, s
     _executeCgi(fd, path, args);
     */
 
-
-
 	if (_static_folders.find(path) == _static_folders.end())
 	{
 		std::cerr << "Path not found:" << path << std::endl;
 		return;
 	}
 
-	if (file.empty())
-		file = "index.html";
-   
    std::string file_path = _static_folders[path] + file;
 		
 	if (_static_folders.find(path) == _static_folders.end()
@@ -178,6 +177,8 @@ Request parseRequest(std::string request)
 	ret.folder = ret.path.substr(0, ret.path.find_last_of('/'));
 	ret.folder += "/";
 	ret.file = ret.path.substr(ret.path.find_last_of('/') + 1);
+	if (ret.file.empty())
+		ret.file = "index.html";
 	ret.mime_type = getMimeType(ret.file);
 
 	//DEBUG:
@@ -228,7 +229,12 @@ void    Webserv::serverLoop()
                     if ((request = _getRequest(i)).empty())
                         continue;
 					Request req = parseRequest(request);
-                    _sendResponse(i, _default_response, req.folder, req.file, req.mime_type);
+					req.static_folders = &_static_folders;
+
+					if (req.method == "GET")
+						getResponse(req, i);
+					else
+                    	_sendResponse(i, _default_response, req.folder, req.file, req.mime_type);
                 }
             }
             if (flag)
@@ -243,32 +249,57 @@ void Webserv::use(std::string path, std::string root)
 	_static_folders.insert(std::pair<std::string, std::string>(path, root));
 }
 
-void send_file(int fd, const std::string& path, const std::string& mime_type)
+void Webserv::get(std::string path, FunctionType func)
 {
-	std::ifstream       in(path, std::ios::in | std::ios::binary);
-	std::stringstream   buff;
-	buff << in.rdbuf();
-	in.close();
-	
-	std::string response = "HTTP/1.1 200 OK\n\
-	Access-Control-Allow-Origin: *\n\
-	Content-Length: ";
-	response += std::to_string(buff.str().size());
-	response += "\nContent-Type: ";
-	response += mime_type;
-	response += "\n\n";
-	response += buff.str();
+	_get.insert(std::pair<std::string, FunctionType>(path, func));
+}
+
+void Webserv::getResponse(Request req, int fd)
+{
+	// DEBUG:
+	std::cout << "GET Response: " << _static_folders[req.path] + req.file << std::endl;
+	std::cout << "path: " << req.path << std::endl;
+	std::cout << "file: " << req.file << std::endl;
+	if (_get.find(req.path) != _get.end())
+		_get[req.path](req, fd);
+	else if (file_exists(_static_folders[req.folder] + req.file))
+		send_file(fd, _static_folders[req.folder] + req.file, req.mime_type);
+	else
+		res(_default_response, fd);
+
+	close(fd);
+	FD_CLR(fd, &_client_fd_set);
+}
+
+void Webserv::post(std::string path, FunctionType func)
+{
+	_post.insert(std::pair<std::string, FunctionType>(path, func));
+}
+
+void Webserv::postResponse(Request req, int fd)
+{
+	//TODO
+	(void)req;
+	(void)fd;
+}
+
+void res(std::string status, std::string headers, std::string body, int fd)
+{
+	std::string response = "HTTP/1.1 " + status + "\n" + headers + "\n\n" + body;
 	if ((write(fd, response.c_str(), response.size())) == -1)
 	{
-		perror("write in send_response");
+		perror("write in res");
 		exit(EXIT_FAILURE);
 	}
 }
 
-bool file_exists(const std::string& filename)
+void res(std::string rep, int fd)
 {
-    std::ifstream file(filename);
-    return file.good();
+	if ((write(fd, rep.c_str(), rep.size())) == -1)
+	{
+		perror("write in res");
+		exit(EXIT_FAILURE);
+	}
 }
 
 //--------------Operators----------------//
@@ -291,10 +322,9 @@ Webserv::Webserv(ServerConfig &new_config) {
 	_config = new_config;
 }
 Webserv::Webserv(int port) : _sock_serv(port), _default_response("\
-HTTP/1.1 200 OK\n\
-Content-Type: text/plain\n\
-Content-Length: 12\n\n\
-ERROR 404!")
+HTTP/1.1 404 Not Found\n\
+Content-Type: text/html\n\n\
+<html><body><h1>404 Not Found</h1></body></html>")
 {
     if (listen(_sock_serv.getFd(), 1) < 0)
     {
@@ -305,6 +335,7 @@ ERROR 404!")
     FD_ZERO(&_client_fd_set);
     FD_SET(_sock_serv.getFd(), &_client_fd_set);
 }
+
 Webserv::Webserv(Webserv const &src)
 {
 	*this = src;
@@ -350,4 +381,31 @@ void    sigint_handler(int signal)
 {
     std::cout << "Stopping server, sigint:" << signal<<std::endl;
     flag = 1;
+}
+
+void send_file(int fd, const std::string& path, const std::string& mime_type)
+{
+
+	std::ifstream       in(path, std::ios::in | std::ios::binary);
+	std::stringstream   buff;
+	buff << in.rdbuf();
+	in.close();
+	
+	std::string response = "HTTP/1.1 200 OK\n\
+	Access-Control-Allow-Origin: *\n\
+	Content-Length: ";
+	response += std::to_string(buff.str().size());
+	response += "\nContent-Type: ";
+	response += mime_type;
+	response += "\n\n";
+	response += buff.str();
+	res(response, fd);
+	// std::string ok = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+	// write(fd, ok.c_str(), ok.size());
+}
+
+bool file_exists(const std::string& filename)
+{
+    std::ifstream file(filename);
+    return file.good();
 }

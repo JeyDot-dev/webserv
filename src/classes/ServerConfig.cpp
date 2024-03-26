@@ -6,7 +6,7 @@
 /*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/12 16:26:12 by lsohler           #+#    #+#             */
-/*   Updated: 2024/03/15 17:29:54 by lsohler          ###   ########.fr       */
+/*   Updated: 2024/03/26 14:16:24 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -229,6 +229,7 @@ void	handleLocation(ServerConfig &config, std::vector<std::string> &tokens) {
 		std::cerr << "Location parsing error." << std::endl;
 		exit(1);
 	}
+	tokens.erase(tokens.begin());
 	while (!tokens.empty()) {
 		if (map.find(*tokens.begin()) != map.end()) {
 			locationHandler function = map[*tokens.begin()];

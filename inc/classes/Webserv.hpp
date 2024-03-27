@@ -3,7 +3,7 @@
 #  ifndef BUFFER_SIZE
 #   define BUFFER_SIZE 1024
 #  endif
-#define TIMEOUT_SEC 999999
+#define TIMEOUT_SEC 5
 #include <iostream>
 #include <sys/select.h>
 #include <vector>
@@ -37,9 +37,10 @@ typedef void (*FunctionType)(Request, int);
 class	Webserv
 {
 public:
-    void    serverLoop();
-    
-	Webserv&	operator=(Webserv const& rhs);
+    int                 getFd() const;
+    void                sendResponse(int fd, std::string response);
+
+	Webserv&        operator=(Webserv const& rhs);
 
 	Webserv(void);
     Webserv(int port);
@@ -65,15 +66,16 @@ private:
     void                    _sendResponse(int fd, std::string response, std::string path_file,  std::string file, std::string mime_type);
 
     Socket                  _sock_serv;
-    std::map<int, Socket>   _sock_clients;
-    fd_set                  _client_fd_set;
-    int                     _max_fd;
-    std::string             _default_response;
 	std::map<std::string, std::string> _static_folders;
 	std::map<std::string, FunctionType> _get;
 	std::map<std::string, FunctionType> _post;
 	std::vector<Request>	_requests;
     //------------------------------------------
+public:
+    //-------------NON MEMBER-------------------
+    static void         serverLoop(std::map<int, Webserv> map_serv);
+    static void         closeFds(fd_set &set, int max_fd);
+    static std::string  getRequest(int fd, fd_set& set);
 };
 
 void send_file(int fd, const std::string& path, const std::string& mime_type);

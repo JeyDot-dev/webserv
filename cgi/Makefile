@@ -54,6 +54,7 @@ MAKEFLAGS   += --no-print-directory
 all		:	$(NAME)
 #-----------------------------NAME-----------------------------------
 $(NAME)	:	$(OBJ)
+			@mkdir bin
 			TOTAL_OBJ=$(find .build -name "*.o")
 			echo "currently $(TOTAL_OBJ) objects out of $(TOTAL_OBJ) are compiled"
 #			$(MAKE) complib

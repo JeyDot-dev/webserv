@@ -37,13 +37,16 @@ Socket& Socket::operator=(Socket const&  rhs)
     return *this;
 }
 //--------------Constructors------------//
-Socket::Socket(Socket const &src):  socket_fd(src.socket_fd), sockaddr(src.sockaddr),
+Socket::Socket(Socket const &src):  socket_fd(src.socket_fd),
+                                    server_fd(src.server_fd),
+                                    sockaddr(src.sockaddr),
                                     sockaddr_size(src.sockaddr_size)
 {
 }
 
 Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
-                                                sockaddr()
+                                server_fd(0),
+                                sockaddr()
 {
     if (socket_fd < 0)
     {
@@ -76,6 +79,7 @@ Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
     this->showInfo();
 }
 Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
+                                                server_fd(0),
                                                 sockaddr()
 {
     if (socket_fd < 0)
@@ -109,6 +113,7 @@ Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_S
     this->showInfo();
 }
 Socket::Socket(void) :  socket_fd(-1),
+                        server_fd(0),
                         sockaddr(),
                         sockaddr_size(sizeof(sockaddr))
 {
@@ -133,6 +138,7 @@ void    Socket::Accept(Socket& listening_socket, Socket& calling_socket)
         perror("Couldn't bind socket");
         exit(1);
     }
+    calling_socket.server_fd = listening_socket.getFd(); 
     std::cout << "ACCEPTED: "; calling_socket.showInfo();
 }
 std::string addrToString(uint32_t ip)

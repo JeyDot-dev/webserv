@@ -15,8 +15,7 @@ void getPingRequest(Request req, int fd)
 
 int main(int ac, char **av, char** envp)
 {
-	(void)av;
-	(void)envp;
+    std::map<int, Webserv> map_serv;
 	if (ac != 2)
 	{
 		std::cerr << "Usage: ./Webserv <config_file>" << std::endl;

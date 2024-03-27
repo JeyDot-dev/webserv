@@ -29,7 +29,10 @@ struct Request
 	std::string     version;
 	std::map<std::string, std::string> headers;
 	std::string     body;
-	std::map<std::string, std::string> *static_folders;
+	std::map<std::string, std::string> &static_folders;
+	fd_set			&set;
+
+	Request(std::map<std::string, std::string> &static_folders, fd_set &set) : static_folders(static_folders), set(set) {}
 };
 
 typedef void (*FunctionType)(Request, int);
@@ -38,7 +41,7 @@ class	Webserv
 {
 public:
     int                 getFd() const;
-    void                sendResponse(int fd, std::string response);
+    void				sendResponse(int fd, Request req);
 
 	Webserv&        operator=(Webserv const& rhs);
 
@@ -70,6 +73,7 @@ private:
 	std::map<std::string, FunctionType> _get;
 	std::map<std::string, FunctionType> _post;
 	std::vector<Request>	_requests;
+
     //------------------------------------------
 public:
     //-------------NON MEMBER-------------------

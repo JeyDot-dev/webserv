@@ -15,7 +15,11 @@ public:
 	ServerConfig(ServerConfig const &other);
 	~ServerConfig();
 
-	void		init(std::string file_path);
+	void		setPort(int port);
+	void		setServerName(std::string server_name);
+
+	void		setLocationValue(std::string location, std::string key, std::string value);
+
 	int			getPort() const;
 	std::string	getServerName() const;
 	std::map<std::string, std::map<std::string, std::string> >	getLocations() const;

@@ -100,6 +100,7 @@ void	Webserv::sendResponse(int fd, Request req)
 	else
 		res(default_response, fd);
 
+
 // 	if (_static_folders.find(path) == _static_folders.end())
 // 	{
 // 		std::cerr << "Path not found:" << path << std::endl;
@@ -121,31 +122,9 @@ void	Webserv::sendResponse(int fd, Request req)
 // 	send_file(fd, file_path, mime_type);
 
 // 	//_sock_clients[fd].showInfo();
-// 	close(fd);
-// 	FD_CLR(fd, &_client_fd_set);
+	close(fd);
+	FD_CLR(fd, &req.set);
 }
-
-// std::string Webserv::_getRequest(int fd)
-// {
-// 	int		 bytes_read = 0;
-// 	char		buffer[BUFFER_SIZE];
-// 	std::string ret;
-
-// 	if ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0)
-// 		ret.append(buffer, bytes_read);
-// 	else if (bytes_read == -1)
-// 	{
-// 		perror("read in get_request");
-// 		exit(EXIT_FAILURE);
-// 	}
-// 	else
-// 	{
-// 		close(fd);
-// 		FD_CLR(fd, &_client_fd_set);
-// 		return std::string("");
-// 	}
-// 	return ret;
-// }
 
 bool ends_with(const std::string& value, const std::string& ending)
 {
@@ -170,7 +149,7 @@ std::string getMimeType(const std::string& path)
 	return "text/plain";
 }
 
-void parseRequest(std::string request, Request ret)
+void parseRequest(std::string request, Request &ret)
 {
 	//DEBUG:
 	//std::cout << "Request: " << request << std::endl;
@@ -199,8 +178,8 @@ void parseRequest(std::string request, Request ret)
 	ret.mime_type = getMimeType(ret.file);
 
 	//DEBUG:
-	// std::cout << "Path: " << ret.path << std::endl;
-	// std::cout << "Method: " << ret.mime_type << std::endl;
+	std::cout << "Path: " << ret.path << std::endl;
+	std::cout << "Method: " << ret.mime_type << std::endl;
 }
 
 void Webserv::use(std::string path, std::string root)
@@ -283,9 +262,7 @@ Webserv::Webserv(ServerConfig &new_config) {
 		perror("cannot listen");
 		exit(1);
 	}
-	error_404 = "HTTP/1.1 404 Not Found\n\
-						Content-Type: text/html\n\n\
-						<html><body><h1>404 Not Found</h1></body></html>";
+
 	try {
 		std::map<std::string, std::map<std::string, std::string> > locations = _config.getLocations();
 		std::map<std::string, std::map<std::string, std::string> >::iterator it;
@@ -294,6 +271,7 @@ Webserv::Webserv(ServerConfig &new_config) {
 		for (it = locations.begin(); it != locations.end(); it++)
 		{
 			use(it->first, _config.getLocationValue(it->first, "root"));
+			std::cout << "Location: " << it->first << std::endl;
 			std::cout << _config.getLocationValue(it->first, "root") << std::endl;
 		}
 	}
@@ -302,6 +280,7 @@ Webserv::Webserv(ServerConfig &new_config) {
 		std::cerr << "Error: " << e.what() << std::endl;
 	}
 }
+
 Webserv::Webserv(int port) : _sock_serv(port)
 {
 	if (listen(_sock_serv.getFd(), 1) < 0)
@@ -316,10 +295,12 @@ Webserv::Webserv(Webserv const &src)
 	*this = src;
 	return ;
 }
+
 Webserv::Webserv(void)
 {
 	return ;
 }
+
 Webserv::~Webserv(void)
 {
 	return ;

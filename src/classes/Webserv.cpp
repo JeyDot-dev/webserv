@@ -178,8 +178,8 @@ void parseRequest(std::string request, Request &ret)
 	ret.mime_type = getMimeType(ret.file);
 
 	//DEBUG:
-	std::cout << "Path: " << ret.path << std::endl;
-	std::cout << "Method: " << ret.mime_type << std::endl;
+	// std::cout << "Path: " << ret.path << std::endl;
+	// std::cout << "Method: " << ret.mime_type << std::endl;
 }
 
 void Webserv::use(std::string path, std::string root)
@@ -197,6 +197,7 @@ void Webserv::getResponse(Request req, int fd)
 	// DEBUG:
 	std::cout << "GET Response: " << _static_folders[req.path] + req.file << std::endl;
 	std::cout << "path: " << req.path << std::endl;
+	std::cout << "folder: " << req.folder << std::endl;
 	std::cout << "file: " << req.file << std::endl;
 	if (_get.find(req.path) != _get.end())
 		_get[req.path](req, fd);
@@ -204,6 +205,12 @@ void Webserv::getResponse(Request req, int fd)
 		send_file(fd, _static_folders[req.folder] + req.file, req.mime_type);
 	else
 		res(error_404, fd);
+
+	std::map<std::string, std::string>::iterator it;
+	for (it = _static_folders.begin(); it != _static_folders.end(); it++)
+	{
+		std::cout << "Key: " << it->first << " Value: " << it->second << std::endl;
+	}
 
 	close(fd);
 	FD_CLR(fd, &req.set);
@@ -248,6 +255,9 @@ Webserv&	Webserv::operator=(Webserv const&  rhs)
 		_config = rhs._config;
 		_sock_serv = rhs._sock_serv;
 		envp = rhs.envp;
+		_static_folders = rhs._static_folders;
+		_get = rhs._get;
+		_post = rhs._post;
 	}
 	return *this;
 }

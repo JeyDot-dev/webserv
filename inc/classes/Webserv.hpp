@@ -3,7 +3,7 @@
 #  ifndef BUFFER_SIZE
 #   define BUFFER_SIZE 1024
 #  endif
-#define TIMEOUT_SEC 8
+#define TIMEOUT_SEC 5
 #include <iostream>
 #include <sys/select.h>
 #include <vector>
@@ -14,9 +14,10 @@
 class	Webserv
 {
 public:
-    void    serverLoop();
-    
-	Webserv&	operator=(Webserv const& rhs);
+    int                 getFd() const;
+    void                sendResponse(int fd, std::string response);
+
+	Webserv&        operator=(Webserv const& rhs);
 
 	Webserv(void);
     Webserv(int port);
@@ -31,17 +32,14 @@ private:
     //Response stuff
     int                     _executeCgi(int fd, std::string path, std::vector<std::string> args);
     //Socket/ Client connect, Accept, Respond--
-    std::string             _getRequest(int fd);
-    void                    _closeFds();
-    void                    _sendResponse(int fd, std::string response);
 
     Socket                  _sock_serv;
-    std::map<int, Socket>   _sock_clients;
-    fd_set                  _client_fd_set;
-    int                     _max_fd;
-    std::string             _default_response;
     //------------------------------------------
-
+public:
+    //-------------NON MEMBER-------------------
+    static void         serverLoop(std::map<int, Webserv> map_serv);
+    static void         closeFds(fd_set &set, int max_fd);
+    static std::string  getRequest(int fd, fd_set& set);
 };
 
 #endif

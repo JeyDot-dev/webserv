@@ -5,14 +5,19 @@
 std::map<std::string, Webserv>	configFileParser(std::string filename);
 int main(int ac, char **av, char** envp)
 {
+    std::map<int, Webserv> map_serv;
 	if (ac != 2)
 		std::cerr << "Usage: ./Webserv <config_file>" << std::endl;
 
 	configFileParser(av[1]);
-    Webserv server(8080);
+    for (int i = 8080; i < 8090; i++)
+    {
+        Webserv tmp(i);
+        tmp.envp = envp;
+        map_serv.insert(std::pair<int, Webserv>(tmp.getFd(), tmp));
+    }
 
-    server.envp = envp;    
-    server.serverLoop();
+    Webserv::serverLoop(map_serv);
 
     return 0;
 }

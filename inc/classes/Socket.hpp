@@ -22,6 +22,7 @@ public:
 	~Socket(void);
 
     int                 socket_fd;
+    int                 server_fd;
     struct sockaddr_in  sockaddr;
     socklen_t           sockaddr_size;
 

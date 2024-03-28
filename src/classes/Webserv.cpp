@@ -83,6 +83,7 @@ int	 Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> arg
 	free_exec_args(tmp);
 	return 0;
 }
+
 void	Webserv::sendResponse(int fd, Request req)
 {
 	/*	  CGI TEST
@@ -199,6 +200,7 @@ void Webserv::getResponse(Request req, int fd)
 	std::cout << "path: " << req.path << std::endl;
 	std::cout << "folder: " << req.folder << std::endl;
 	std::cout << "file: " << req.file << std::endl;
+
 	if (_get.find(req.path) != _get.end())
 		_get[req.path](req, fd);
 	else if (file_exists(_static_folders[req.folder] + req.file))
@@ -224,8 +226,10 @@ void Webserv::post(std::string path, FunctionType func)
 void Webserv::postResponse(Request req, int fd)
 {
 	//TODO
-	(void)req;
-	(void)fd;
+	if (_post.find(req.path) != _post.end())
+		_post[req.path](req, fd);
+	else
+		res("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n", fd);
 }
 
 void res(std::string status, std::string headers, std::string body, int fd)

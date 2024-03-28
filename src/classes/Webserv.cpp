@@ -211,9 +211,6 @@ void Webserv::getResponse(Request req, int fd)
 	{
 		std::cout << "Key: " << it->first << " Value: " << it->second << std::endl;
 	}
-
-	close(fd);
-	FD_CLR(fd, &req.set);
 }
 
 void Webserv::post(std::string path, FunctionType func)
@@ -318,13 +315,13 @@ Webserv::~Webserv(void)
 //--------------Non-Member--------------//
 void	Webserv::serverLoop(std::map<int, Webserv> map_serv)
 {
-	struct timeval		  timeout;
-	std::string			 request;
-	Socket				  tmp_socket;
-	fd_set				  original_set;
-	fd_set				  tmp_fd_set;
-	ssize_t				 tmp_ret_value;
-	int					 max_fd = 0;
+	struct timeval          timeout;
+	std::string             request;
+	Socket                  tmp_socket;
+	fd_set                  original_set;
+	fd_set                  tmp_fd_set;
+	ssize_t                 tmp_ret_value;
+	int                     max_fd = 0;
 	std::map<int, Socket>   sock_clients;
 
 	FD_ZERO(&original_set);
@@ -367,11 +364,12 @@ void	Webserv::serverLoop(std::map<int, Webserv> map_serv)
 					if ((request = getRequest(i, original_set)).empty())
 						continue;
 
-					Request req(map_serv[i]._static_folders, original_set);
+					Request req(map_serv[sock_clients[i].server_fd]._static_folders, original_set);
 					parseRequest(request, req);
 
 					map_serv[sock_clients[i].server_fd].sendResponse(i, req);
 					sock_clients[i].showInfo();
+                    sock_clients.erase(i);
 				}
 			}
 			if (flag)

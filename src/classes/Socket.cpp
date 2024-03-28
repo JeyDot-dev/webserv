@@ -50,13 +50,17 @@ Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
 {
     if (socket_fd < 0)
     {
-        perror("Couldn't initialize socket");
-        exit(1);
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't initialize");
+        return;
     }
     if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
     {
-        perror("Couldn't set socket to non block");
-        exit(1);
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't set to non block");
+        close(socket_fd);
+        socket_fd = -1;
+        return;
     }
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
@@ -64,15 +68,19 @@ Socket::Socket(uint16_t port) : socket_fd(socket(AF_INET, SOCK_STREAM, 0)),
     int reuse = 1;
     if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
+        std::cerr << "socket:" << port << " ";
         perror("Couldn't set reuse flag");
         close(socket_fd);
-        exit(1);
+        socket_fd = -1;
+        return;
     }
     if (bindSocket(socket_fd, sockaddr) < 0)
     {
-        perror("Couldn't bind socket");
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't bind");
         close(socket_fd);
-        exit(1);
+        socket_fd = -1;
+        return;
     }
     sockaddr_size = sizeof(sockaddr);
     std::cout << "Successfully created and bound socket.\n";
@@ -84,29 +92,37 @@ Socket::Socket(std::string ip, uint16_t port) : socket_fd(socket(AF_INET, SOCK_S
 {
     if (socket_fd < 0)
     {
-        perror("Couldn't initialize socket");
-        exit(1);
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't initialize");
+        return;
+    }
+    if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
+    {
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't set to non block");
+        close(socket_fd);
+        socket_fd = -1;
+        return;
     }
     int reuse = 1;
     if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
+        std::cerr << "socket:" << port << " ";
         perror("Couldn't set reuse flag");
         close(socket_fd);
-        exit(1);
-    }
-    if (fcntl(socket_fd, F_SETFL, (fcntl(socket_fd, F_GETFL, 0) | O_NONBLOCK) < 0))
-    {
-        perror("Couldn't set socket to non block");
-        exit(1);
+        socket_fd = -1;
+        return;
     }
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     sockaddr.sin_addr.s_addr = htonl(convertIPtoBinary(ip));
     if (bindSocket(socket_fd, sockaddr) < 0)
     {
-        perror("Couldn't bind socket");
+        std::cerr << "socket:" << port << " ";
+        perror("Couldn't bind");
         close(socket_fd);
-        exit(1);
+        socket_fd = -1;
+        return;
     }
     sockaddr_size = sizeof(sockaddr);
     std::cout << "Successfully created and bound socket.\n";
@@ -135,7 +151,7 @@ void    Socket::Accept(Socket& listening_socket, Socket& calling_socket)
     }
     if (fcntl(calling_socket.getFd(), F_SETFL, (fcntl(calling_socket.getFd(), F_GETFL, 0) | O_NONBLOCK) < 0))
     {
-        perror("Couldn't bind socket");
+        perror("Couldn't set to non block");
         exit(1);
     }
     calling_socket.server_fd = listening_socket.getFd(); 

@@ -30,7 +30,7 @@ Content-Type: text/html\n\n\
 
 //--------------Functions----------------//
 void			sigint_handler(int signal);
-char**		  create_exec_args(const std::vector<std::string>& args);
+char**		 	create_exec_args(const std::vector<std::string>& args);
 void			free_exec_args(char** exec_args);
 void			serverLoop(std::map<int, Webserv> map_serv);
 void			closeFds(fd_set &set, int max_fd);
@@ -222,11 +222,62 @@ void Webserv::post(std::string path, FunctionType func)
 
 void Webserv::postResponse(Request req, int fd)
 {
-	//TODO
-	if (_post.find(req.path) != _post.end())
+	if (req.headers.find("Content-Length") == req.headers.end())
+	{
+		res("HTTP/1.1 411 Length Required\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	int content_length = atoi(req.headers["Content-Length"].c_str());
+
+	if (req.body.size() != content_length)
+	{
+		res("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	if (content_length == 0)
+	{
+		res("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	if (content_length > 100000)
+	{
+		res("HTTP/1.1 413 Request Entity Too Large\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+	if (_post.find(req.path) != _post.end()) // Pour les requetes API
 		_post[req.path](req, fd);
 	else
-		res("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n", fd);
+		defaultPost(req, fd);
+}
+
+void defaultPost(Request req, int fd)
+{
+    // Obtenir l'extension du fichier à partir du type de contenu
+    std::string extension;
+    if (req.headers["Content-Type"] == "application/json")
+    {
+        extension = "json";
+    }
+    else
+    {
+        extension = req.headers["Content-Type"].substr(req.headers["Content-Type"].find("/") + 1);
+    }
+
+	//Faut juste que je vois pour le nom du fichier...
+    std::ofstream file("file." + extension, std::ios::binary);
+    file.write(req.body.c_str(), req.body.size());
+    if (!file) //On verifie si le fichier a bien ete cree
+    {
+		std::string response = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+        res(response, fd);
+        return;
+    }
+
+	std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+    res(response, fd);
 }
 
 void res(std::string status, std::string headers, std::string body, int fd)

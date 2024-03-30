@@ -3,7 +3,7 @@
 #  ifndef BUFFER_SIZE
 #   define BUFFER_SIZE 1024
 #  endif
-#define TIMEOUT_SEC 5
+#define TIMEOUT_SEC 8
 #include <iostream>
 #include <sys/select.h>
 #include <vector>
@@ -29,10 +29,13 @@ struct Request
 	std::string     version;
 	std::map<std::string, std::string> headers;
 	std::string     body;
-	std::map<std::string, std::string> &static_folders;
-	fd_set			&set;
+	std::map<std::string, std::string> *static_folders;
+	fd_set			*set;
 
-	Request(std::map<std::string, std::string> &static_folders, fd_set &set) : static_folders(static_folders), set(set) {}
+	Request(std::map<std::string, std::string> *static_folders, fd_set *set) : static_folders(static_folders), set(set) {}
+    Request(Request const&src) : method(src.method), path(src.path), folder(src.folder), file(src.file), mime_type(src.mime_type), version(src.version),
+                            headers(src.headers), body(src.body), static_folders(src.static_folders), set(src.set){}
+    Request(){}
 };
 
 typedef void (*FunctionType)(Request, int);
@@ -78,7 +81,7 @@ private:
 public:
     //-------------NON MEMBER-------------------
     static void         serverLoop(std::map<int, Webserv> map_serv);
-    static void         closeFds(fd_set &set, int max_fd);
+    static void         closeFds(fd_set& set, int max_fd, std::map<int, Webserv>* map_serv = NULL);
     static std::string  getRequest(int fd, fd_set& set);
 };
 

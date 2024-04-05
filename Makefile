@@ -17,7 +17,7 @@ BUILD_D		:=	.build/
 LIB_D		:=	
 #---------------SRCs and Libs-(mac)\/--------------
 SRC			:=	main.cpp utils.cpp
-SRC_CLASSES	:=	Socket.cpp Webserv.cpp ServerConfig.cpp
+SRC_CLASSES	:=	Socket.cpp Webserv.cpp ServerConfig.cpp Cgi.cpp
 INC			:=	inc/ inc/classes/
 LIB			:=
 FRAMEWORK	:=

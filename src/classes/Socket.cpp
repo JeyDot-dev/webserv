@@ -12,15 +12,28 @@
 uint32_t    convertIPtoBinary(const std::string& ipAddress);
 void        printBinary(uint32_t num);
 std::string addrToString(uint32_t ip);
+
+void  Socket::updateLastActivity()
+{
+    gettimeofday(&(this->_last_activity), NULL);
+}
+
+struct timeval  Socket::getLastActivity() const
+{
+    return this->_last_activity;
+}
+
 int Socket::bindSocket(int& sockfd, struct sockaddr_in const& address)
 {
     return bind(sockfd, reinterpret_cast<const struct sockaddr*>(&address), sizeof(address));
 }
+
 void Socket::showInfo() const
 {
     std::cout << "Socket fd:" << socket_fd << ", IP:" <<
         addrToString(ntohl(sockaddr.sin_addr.s_addr)) << ", PORT:" << ntohs(sockaddr.sin_port) << std::endl;
 }
+
 int Socket::getFd(void) const
 {
     return socket_fd;

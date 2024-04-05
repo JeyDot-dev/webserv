@@ -1,4 +1,9 @@
 #include "utils.hpp"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <sys/wait.h>
+#include <unistd.h>
 
 std::map<int, Webserv> initMapServ(std::string file_path)
 {
@@ -51,7 +56,69 @@ std::map<int, Webserv> initMapServ(std::string file_path)
     }
 
 	file.close();
-	return res;
+    return res;
+}
+std::string read_from_pipe(int fd)
+{
+    const int   buffer_size = 4096;
+    char        buffer[buffer_size];
+    std::string result;
+    ssize_t     bytes_read;
+
+    while (true)
+    {
+        bytes_read = read(fd, buffer, buffer_size);
+        if (bytes_read == -1)
+        {
+            perror("Error reading pipe out:");
+            exit(EXIT_FAILURE);
+        }
+        if (bytes_read > 0)
+            result.append(buffer, bytes_read);
+        if (bytes_read < buffer_size)
+            break;
+    }
+    return result;
+}
+std::string   show_directory_content(std::string path, char** envp)
+{
+    char**      args;
+    int         pipe_fd[2];
+    int         pid = 0;
+    int         status = 0;
+    std::string ret;
+    if (path.empty())
+        return NULL;
+    args = new char*[3];
+    args[2] = NULL;
+    args[0] = strdup("ls");
+    args[1] = strdup(path.c_str());
+    if (pipe(pipe_fd) == -1)
+    {
+        delete(args[0]); delete(args[1]); delete(args);
+        perror("fatal error show_directory pipe:");
+        exit(1);
+    }
+    pid = fork();
+    if (pid == 0)
+    {
+        if (dup2(pipe_fd[1], STDOUT_FILENO) == -1 || close(pipe_fd[0] == -1))
+        {
+            perror("error in child of show dir content:");
+            exit(EXIT_FAILURE);
+        }
+        execve("/bin/ls", args, envp);
+        perror("exec in child show dir content:");
+        exit(EXIT_FAILURE);
+    }
+    if (close(pipe_fd[1]) == -1)
+    {
+        perror("fatal error close pipe in show dir content:");
+        exit(EXIT_FAILURE);
+    }
+    waitpid(pid, &status, 0);
+    delete(args[0]); delete(args[1]); delete(args);
+    return(read_from_pipe(pipe_fd[0]));
 }
 
 void webservInit(std::string file_path, std::map<int, Webserv> &map_serv)

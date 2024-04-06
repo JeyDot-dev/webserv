@@ -44,7 +44,8 @@ class	Webserv
 {
 public:
     int                 getFd() const;
-    void				sendResponse(int fd, Request req);
+    std::string         getIp() const;
+    void				sendResponse(int fd, Request req, std::string client_ip);
 
 	Webserv&        operator=(Webserv const& rhs);
 
@@ -65,7 +66,7 @@ public:
 private:
 	ServerConfig            _config;
     //Response stuff
-    int                     _executeCgi(int fd, std::string path, std::vector<std::string> args);
+    std::string	 _executeCgi(Request req, std::string client_ip, std::string host_ip);
     //Socket/ Client connect, Accept, Respond--
     std::string             _getRequest(int fd);
     void                    _closeFds();

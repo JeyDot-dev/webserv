@@ -2,6 +2,7 @@
 # define	CGI_HPP
 #include <iostream>
 #include <map>
+#include "Webserv.hpp"
 
 enum cgi_env
 {
@@ -23,6 +24,9 @@ class	Cgi
 {
 
 public:
+    std::vector<std::string>    getEnv() const;
+    std::string                 getPath() const;
+    Cgi(Request req, std::string client_ip, std::string host_ip);
 	Cgi(Cgi const & src);
 	Cgi&	operator=(Cgi const& rhs);
 
@@ -30,7 +34,7 @@ public:
 	~Cgi(void);
 
 private:
-    std::map<std::string, std::string>  env_vars;
+    std::vector<std::string>    _env_vars;
 
 };
 

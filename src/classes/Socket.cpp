@@ -13,6 +13,10 @@ uint32_t    convertIPtoBinary(const std::string& ipAddress);
 void        printBinary(uint32_t num);
 std::string addrToString(uint32_t ip);
 
+std::string Socket::getIp() const
+{
+    return addrToString(ntohl(this->sockaddr.sin_addr.s_addr));
+}
 void  Socket::updateLastActivity()
 {
     gettimeofday(&(this->_last_activity), NULL);

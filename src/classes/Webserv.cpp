@@ -116,9 +116,7 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 {
     //IF CGI
     //std::string response;
-    std::cout << "******path in req:" << req.path << std::endl;
     std::string response = _executeCgi(req, client_ip, this->getIp());
-    std::cout << "*****CGI RESPONSE IS\n" << response << std::endl;
 /*	if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")

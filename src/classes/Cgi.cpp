@@ -12,7 +12,6 @@ std::string                 Cgi::getPath() const
     if (start >= _env_vars[SCRIPT_FILENAME].size())
         return std::string();
     std::string path = _env_vars[SCRIPT_FILENAME].substr(start);
-    std::cerr << "--------------PATH:" << path << std::endl;
     return path;
 }
 //--------------Operators----------------//

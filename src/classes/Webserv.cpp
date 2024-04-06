@@ -67,21 +67,34 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 	int         child = 0;
     int         pipe_out[2];
     int         pipe_in[2];
+    char**      args;
 
-    if ((req.method == "POST" && pipe(pipe_in) == -1) || pipe(pipe_out) == -1 || (child = fork()) == -1)
+    if (cgi_class.getPath().empty() || (req.method == "POST" && pipe(pipe_in) == -1) || pipe(pipe_out) == -1)
 	{
+    	perror("execute Cgi");
+        return ("Status: 500\r\n\r\n");
+    }
+    args = new char*[3];
+    args[0] = strdup(cgi_class.getPath().c_str());
+    args[1] = strdup(cgi_class.getScriptPath().c_str());
+    args[2] = NULL;
+    if ((child = fork()) == -1)
+	{
+        delete args[0];
+        delete args;
     	perror("execute Cgi");
         return ("Status: 500\r\n\r\n");
     }
     if (req.method == "POST" && write(pipe_in[1], req.body.c_str(), req.body.size()) <= 0)
     {
         close(pipe_in[1]); close(pipe_in[0]); close(pipe_out[0]); close(pipe_out[1]);
+        delete args[0];
+        delete args;
         return ("Status: 422\r\n\r\n");
     }
     close(pipe_in[1]);
 	if (child == 0)
 	{
-        char * const* args = NULL;
         close(pipe_out[0]);
 		if ((req.method == "POST" && dup2(pipe_in[0], STDIN_FILENO) == -1) || dup2(pipe_out[1], STDOUT_FILENO) == -1)
 		{
@@ -90,7 +103,7 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 		}
         close(pipe_in[0]);
         close(pipe_out[1]);
-		execve(cgi_class.getPath().c_str(), args, env); 
+		execve(args[0], args, env); 
 		perror("execve cgi:");
 		exit(EXIT_FAILURE);
 	}
@@ -98,9 +111,13 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     close(pipe_in[0]);
 	if (waitpid(child, &status, 0) == -1)
 	{
+        delete args[0];
+        delete args;
 		perror("waitpid");
 		exit(EXIT_FAILURE);
 	}
+    delete args[0];
+    delete args;
 	if (!WIFEXITED(status) || WEXITSTATUS(status))
 	{
 		std::cerr << "Child terminated abnormally" << std::endl;
@@ -117,12 +134,14 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
     //IF CGI
     //std::string response;
     std::string response = _executeCgi(req, client_ip, this->getIp());
+    std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
+    std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
 /*	if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")
 		postResponse(req, fd);
-	else
-		res(default_response, fd);*/
+	else*/
+		res(response_test, fd);
 
 
 // 	if (_static_folders.find(path) == _static_folders.end())

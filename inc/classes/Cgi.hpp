@@ -26,6 +26,7 @@ class	Cgi
 public:
     std::vector<std::string>    getEnv() const;
     std::string                 getPath() const;
+    std::string                 getScriptPath() const;
     Cgi(Request req, std::string client_ip, std::string host_ip);
 	Cgi(Cgi const & src);
 	Cgi&	operator=(Cgi const& rhs);

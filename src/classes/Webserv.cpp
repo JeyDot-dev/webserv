@@ -76,6 +76,7 @@ void    alarm_handler(int sig)
     std::cout << "Status: 508\r\n\r\n";
     exit (42);
 }
+
 std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
 {
     Cgi         cgi_class(req, client_ip, host_ip);
@@ -99,16 +100,16 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     args[2] = NULL;
     if ((child = fork()) == -1)
 	{
-        delete args[0];
-        delete args;
+        delete[] args[0];
+        delete[] args;
     	perror("execute Cgi");
         return ("Status: 500\r\n\r\n");
     }
     if (req.method == "POST" && write(pipe_in[1], req.body.c_str(), req.body.size()) <= 0)
     {
         close(pipe_in[1]); close(pipe_in[0]); close(pipe_out[0]); close(pipe_out[1]);
-        delete args[0];
-        delete args;
+        delete[] args[0];
+        delete[] args;
         return ("Status: 422\r\n\r\n");
     }
     close(pipe_in[1]);
@@ -134,13 +135,13 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 	if (waitpid(child, &status, 0) == -1)
 	{
         free_exec_args(env);
-        delete args[0];
-        delete args;
+        delete[] args[0];
+        delete[] args;
 		perror("waitpid");
 		exit(EXIT_FAILURE);
 	}
-    delete args[0];
-    delete args;
+    delete[] args[0];
+    delete[] args;
 	free_exec_args(env);
     int exit_status = WIFEXITED(status);
 	if (exit_status && exit_status != 42)
@@ -157,42 +158,36 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 {
     //IF CGI
-    //std::string response;
+    // std::string response;
     std::string response = _executeCgi(req, client_ip, this->getIp());
-    std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
-    std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
-/*	if (req.method == "GET")
+    // std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
+    // std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
+
+	if ((req.path.size() > 4 && req.path.substr(req.path.size() - 4) == ".php")
+		|| (req.path.size() > 3 && req.path.substr(req.path.size() - 3) == ".py"))
+	{
+		send_response_cgi(req, client_ip, this->getIp(), fd);
+		return;
+	}
+
+	if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")
 		postResponse(req, fd);
-	else*/
-		res(response_test, fd);
+	else
+		res(error_404, fd);
 
-
-// 	if (_static_folders.find(path) == _static_folders.end())
-// 	{
-// 		std::cerr << "Path not found:" << path << std::endl;
-// 		return;
-// 	}
-
-//    std::string file_path = _static_folders[path] + file;
-		
-// 	if (_static_folders.find(path) == _static_folders.end()
-// 		|| _static_folders[path].empty()
-// 		|| mime_type.empty()
-// 		|| !file_exists(file_path))
-// 	{
-// 		std::cerr << "Path empty:" << path << std::endl;
-// 		write(fd, response.c_str(), response.size());
-// 		return;
-// 	}
-
-// 	send_file(fd, file_path, mime_type);
-
-// 	//_sock_clients[fd].showInfo();
 	close(fd);
 	FD_CLR(fd, req.set);
 }
+
+std::string Webserv:: send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd)
+{
+	std::string response = _executeCgi(req, client_ip, host_ip);
+	res(response, fd);
+	return response;
+}
+
 
 bool ends_with(const std::string& value, const std::string& ending)
 {
@@ -220,7 +215,7 @@ std::string getMimeType(const std::string& path)
 void parseRequest(std::string request, Request &ret)
 {
 	//DEBUG:
-	//std::cout << "Request: " << request << std::endl;
+	// std::cout << "Request: " << request << std::endl;
 
 	ret.method = request.substr(0, request.find(' ')); //Par exemple GET
 	request = request.substr(request.find(' ') + 1); //On enleve le GET
@@ -235,7 +230,6 @@ void parseRequest(std::string request, Request &ret)
 		std::string value = request.substr(0, request.find("\n"));
 		request = request.substr(request.find("\n") + 1);
 		ret.headers.insert(std::pair<std::string, std::string>(key, value));
-		std::cout << key << ": " << value << std::endl;
 	}
 	ret.body = request; //On recupere le body (c'est tout ce qui reste)
 
@@ -245,6 +239,14 @@ void parseRequest(std::string request, Request &ret)
 	if (ret.file.empty())
 		ret.file = "index.html";
 	ret.mime_type = getMimeType(ret.file);
+	if (ret.path.find('?') != std::string::npos)
+	{
+		ret.query = ret.path.substr(ret.path.find('?') + 1);
+		ret.path = ret.path.substr(0, ret.path.find('?'));
+		ret.file = ret.path.substr(ret.path.find_last_of('/') + 1);
+	}
+	else
+		ret.query = "";
 
 	//DEBUG:
 	// std::cout << "Path: " << ret.path << std::endl;
@@ -285,6 +287,7 @@ void Webserv::post(std::string path, FunctionType func)
 {
 	_post.insert(std::pair<std::string, FunctionType>(path, func));
 }
+
 void Webserv::postResponse(Request req, int fd)
 {
 	if (req.headers.find("Content-Length") == req.headers.end())

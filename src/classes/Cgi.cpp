@@ -45,7 +45,7 @@ Cgi::Cgi(Request req, std::string client_ip, std::string host_ip)
     else
     _env_vars.push_back("PATH_INFO=");
     //TODO QUERY STRING 
-    _env_vars.push_back("QUERY_STRING=" + std::string("a=40&b=2"));
+    _env_vars.push_back("QUERY_STRING=" + req.query);
     _env_vars.push_back("REMOTE_ADDR=" + client_ip);
     _env_vars.push_back("REMOTE_HOST=" + client_ip);
     _env_vars.push_back("REQUEST_METHOD=" + req.method);

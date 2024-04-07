@@ -27,6 +27,7 @@ struct Request
 	std::string     file;
 	std::string     mime_type;
 	std::string     version;
+	std::string		query;
 	std::string		type; //File, Folder, CGI ?
 	std::map<std::string, std::string> headers;
 	std::string     body;
@@ -61,6 +62,7 @@ public:
 	void getResponse(Request req, int fd);
 	void post(std::string path, FunctionType func);
 	void postResponse(Request req, int fd);
+	std::string send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd);
 
     char**                  envp;
 

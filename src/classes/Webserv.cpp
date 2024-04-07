@@ -16,6 +16,9 @@
 #include <map>
 #include <string>
 #include "ServerConfig.hpp"
+#include <algorithm>
+#include <sys/stat.h>
+#include <utils.hpp>
 
 std::string default_response("\
 HTTP/1.1 200 OK\n\
@@ -29,22 +32,37 @@ Content-Type: text/html\n\n\
 <html><body><h1>404 Not Found</h1></body></html>");
 
 //--------------Functions----------------//
+void            check_hanging(fd_set& read_set, fd_set& write_set, fd_set& tmp_read_set,
+                                fd_set& tmp_write_set, std::map<int, Socket>& sock_clients, int max_fd,
+                                std::map<int, Request>& map_req, std::map<int, Webserv>& map_serv);
 void			sigint_handler(int signal);
-char**		  create_exec_args(const std::vector<std::string>& args);
+char**		 	  create_exec_args(const std::vector<std::string>& args);
 void			free_exec_args(char** exec_args);
 void			serverLoop(std::map<int, Webserv> map_serv);
 void			closeFds(fd_set &set, int max_fd);
 std::string	 getRequest(int fd, fd_set& set);
-int			 fd_is_serv(int fd, std::map<int, Webserv> map_serv, fd_set& set);
+int			 fd_is_serv(int fd, std::map<int, Webserv>& map_serv, fd_set& set);
 volatile sig_atomic_t   flag = 0;
 void send_file(int fd, const std::string& path, const std::string& mime_type);
 bool file_exists(const std::string& filename);
 void res(std::string status, std::string headers, std::string body, int fd);
 void res(std::string rep, int fd);
+void defaultPost(Request req, int fd);
 
 int	 Webserv::getFd() const
 {
 	return this->_sock_serv.getFd(); 
+}
+
+bool directoryExists(const std::string& path)
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    else if (info.st_mode & S_IFDIR)
+        return true;
+    else
+        return false;
 }
 
 int	 Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
@@ -124,7 +142,7 @@ void	Webserv::sendResponse(int fd, Request req)
 
 // 	//_sock_clients[fd].showInfo();
 	close(fd);
-	FD_CLR(fd, &req.set);
+	FD_CLR(fd, req.set);
 }
 
 bool ends_with(const std::string& value, const std::string& ending)
@@ -206,6 +224,10 @@ void Webserv::getResponse(Request req, int fd)
 		_get[req.path](req, fd);
 	else if (file_exists(_static_folders[req.folder] + req.file))
 		send_file(fd, _static_folders[req.folder] + req.file, req.mime_type);
+	else if (file_exists(req.path))
+		send_file(fd, req.path, req.mime_type);
+	else if (req.file == "index.html" && (directoryExists(req.folder) || directoryExists(_static_folders[req.folder])))
+		std::cout << listFilesInDirectory(_static_folders[req.folder]) << std::endl;
 	else
 		res(error_404, fd);
 }
@@ -214,14 +236,64 @@ void Webserv::post(std::string path, FunctionType func)
 {
 	_post.insert(std::pair<std::string, FunctionType>(path, func));
 }
-
 void Webserv::postResponse(Request req, int fd)
 {
-	//TODO
-	if (_post.find(req.path) != _post.end())
+	if (req.headers.find("Content-Length") == req.headers.end())
+	{
+		res("HTTP/1.1 411 Length Required\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	int content_length = atoi(req.headers["Content-Length"].c_str());
+
+	if ((int)req.body.size() != content_length)
+	{
+		res("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	if (content_length == 0)
+	{
+		res("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+
+	if (content_length > 100000) //MAX BODY SIZE
+	{
+		res("HTTP/1.1 413 Request Entity Too Large\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+	if (_post.find(req.path) != _post.end()) // Pour les requetes API
 		_post[req.path](req, fd);
 	else
-		res("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n", fd);
+		defaultPost(req, fd);
+}
+
+void defaultPost(Request req, int fd)
+{
+    // Obtenir l'extension du fichier à partir du type de contenu
+    std::string extension;
+    if (req.headers["Content-Type"] == "application/json")
+    {
+        extension = "json";
+    }
+    else
+    {
+        extension = req.headers["Content-Type"].substr(req.headers["Content-Type"].find("/") + 1);
+    }
+
+	//Faut juste que je vois pour le nom du fichier...
+    std::ofstream file("file." + extension, std::ios::binary);
+    file.write(req.body.c_str(), req.body.size());
+    if (!file) //On verifie si le fichier a bien ete cree
+    {
+		std::string response = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+        res(response, fd);
+        return;
+    }
+
+	std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+    res(response, fd);
 }
 
 void res(std::string status, std::string headers, std::string body, int fd)
@@ -317,76 +389,112 @@ void	Webserv::serverLoop(std::map<int, Webserv> map_serv)
 	struct timeval          timeout;
 	std::string             request;
 	Socket                  tmp_socket;
-	fd_set                  original_set;
-	fd_set                  tmp_fd_set;
+	fd_set                  read_set;
+    fd_set                  write_set;
+	fd_set                  tmp_write_set;
+	fd_set                  tmp_read_set;
 	ssize_t                 tmp_ret_value;
 	int                     max_fd = 0;
+    std::map<int, Request>  map_req;
 	std::map<int, Socket>   sock_clients;
 
-	FD_ZERO(&original_set);
+	FD_ZERO(&read_set);
+    FD_ZERO(&write_set);
 	for (std::map<int, Webserv>::iterator it = map_serv.begin(); it != map_serv.end(); it++)
 	{
-		FD_SET(it->first, &original_set);
+		FD_SET(it->first, &read_set);
 		max_fd = it->first;
 	}
 
 	signal(SIGINT, sigint_handler);
 	while (!flag)
 	{
-		tmp_fd_set = original_set;
+		tmp_read_set = read_set;
+		tmp_write_set = write_set;
 		timeout.tv_sec = TIMEOUT_SEC;
 		timeout.tv_usec = 0;
 		std::cout << "\tWaiting for something to happen.."<<std::endl;
-		tmp_ret_value = select(max_fd + 1, &tmp_fd_set, NULL, NULL, &timeout);
+		tmp_ret_value = select(max_fd + 1, &tmp_read_set, &tmp_write_set, NULL, &timeout);
 		if (tmp_ret_value < 0)
 		{
 			perror("select:");
 			exit(EXIT_FAILURE);
 		}
 		if (tmp_ret_value == 0)
+        {
+            closeFds(read_set, max_fd, &map_serv);
+            closeFds(write_set, max_fd);
 			continue;
+        }
+        check_hanging(read_set, write_set, tmp_read_set, tmp_write_set, sock_clients, max_fd, map_req, map_serv);
 		for (int i = 0; i <= max_fd; i++)
 		{
-			if (FD_ISSET(i, &tmp_fd_set))
+			if (FD_ISSET(i, &tmp_read_set))
 			{
-				if (fd_is_serv(i, map_serv, tmp_fd_set))
+				if (fd_is_serv(i, map_serv, tmp_read_set))
 				{
 					Socket::Accept(map_serv[i]._sock_serv, tmp_socket);
 					sock_clients.insert(std::pair<int, Socket>(tmp_socket.getFd(), tmp_socket));
 					tmp_socket.showInfo();
-					FD_SET(tmp_socket.getFd(), &original_set);
+					FD_SET(tmp_socket.getFd(), &read_set);
 					if (tmp_socket.getFd() > max_fd)
 						max_fd = tmp_socket.getFd();
+                    sock_clients[i].updateLastActivity();
 				}
 				else
 				{
-					if ((request = getRequest(i, original_set)).empty())
+					if ((request = getRequest(i, read_set)).empty())
+                    {
+                        sock_clients.erase(i);
 						continue;
+                    }
 
-					Request req(map_serv[sock_clients[i].server_fd]._static_folders, original_set);
+                    FD_SET(i, &write_set);
+                    FD_CLR(i, &read_set);
+					Request req(&(map_serv[sock_clients[i].server_fd]._static_folders), &write_set);
 					parseRequest(request, req);
+                    map_req[i] = req;
 
-					map_serv[sock_clients[i].server_fd].sendResponse(i, req);
 					sock_clients[i].showInfo();
-                    sock_clients.erase(i);
+                    sock_clients[i].updateLastActivity();
 				}
 			}
+            else if (FD_ISSET(i, &tmp_write_set))
+            {
+				map_serv[sock_clients[i].server_fd].sendResponse(i, map_req[i]);
+                map_req.erase(i);
+                sock_clients.erase(i);
+            }
 			if (flag)
 				break;
 		}
 	}
-	closeFds(original_set, max_fd);
+	closeFds(read_set, max_fd);
 }
-void	Webserv::closeFds(fd_set& set, int max_fd)
+void	Webserv::closeFds(fd_set& set, int max_fd, std::map<int, Webserv>* map_serv)
 {
-	for (int i = 0; i < max_fd; i++)
-	{
-		if (FD_ISSET(i, &set))
-		{
-			close(i);
-			FD_CLR(i, &set);
-		}
-	}
+    if  (map_serv == NULL)
+    {
+        for (int i = 0; i < max_fd + 1; i++)
+        {
+            if (FD_ISSET(i, &set))
+            {
+                close(i);
+                FD_CLR(i, &set);
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < max_fd + 1; i++)
+        {
+            if (map_serv->find(i) == map_serv->end() && FD_ISSET(i, &set))
+            {
+                close(i);
+                FD_CLR(i, &set);
+            }
+        }
+    }
 }
 std::string Webserv::getRequest(int fd, fd_set& set)
 {
@@ -428,7 +536,7 @@ char** create_exec_args(const std::vector<std::string>& args)
 	exec_args[args.size()] = NULL;
 	return exec_args;
 }
-int fd_is_serv(int fd, std::map<int, Webserv> map_serv, fd_set& set)
+int fd_is_serv(int fd, std::map<int, Webserv>& map_serv, fd_set& set)
 {
 	int last = map_serv.rbegin()->first;
 	for (size_t i = 0; i < map_serv.size(); i++)
@@ -450,7 +558,8 @@ void free_exec_args(char** exec_args)
 }
 void	sigint_handler(int signal)
 {
-	std::cout << "Stopping server, sigint:" << signal<<std::endl;
+    (void) signal;
+	std::cout << "Stopping server : sigint" <<std::endl;
 	flag = 1;
 }
 
@@ -482,4 +591,27 @@ bool file_exists(const std::string& filename)
 {
 	std::ifstream file(filename.c_str());
 	return file.good();
+}
+
+void            check_hanging(fd_set& read_set, fd_set& write_set, fd_set& tmp_read_set,
+                                fd_set& tmp_write_set, std::map<int, Socket>& sock_clients, int max_fd,
+                                std::map<int, Request>& map_req, std::map<int, Webserv>& map_serv)
+{
+    struct timeval tmp;
+    gettimeofday(&tmp, NULL);
+
+    for (int i = 0; i < max_fd + 1; i++)
+    {
+        if (fd_is_serv(i, map_serv, read_set) || FD_ISSET(i, &tmp_read_set) || FD_ISSET(i, &tmp_write_set)
+                || (!FD_ISSET(i, &read_set) && !FD_ISSET(i, &write_set)) 
+                ||  tmp.tv_sec - sock_clients[i].getLastActivity().tv_sec < TIMEOUT_SEC)
+            continue;
+        if (FD_ISSET(i, &read_set))
+            FD_CLR(i, &read_set);
+        if (FD_ISSET(i, &write_set))
+            FD_CLR(i, &write_set);
+        close(i);
+        sock_clients.erase(i);
+        map_req.erase(i);
+    }
 }

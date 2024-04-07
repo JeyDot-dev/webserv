@@ -165,8 +165,7 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 	std::cout << "PATH: " << req.path << std::endl;
 	std::cout << "QUERY: " << req.query << std::endl;
 
-	if ((req.path.size() > 4 && req.path.substr(req.path.size() - 4) == ".php")
-		|| (req.path.size() > 3 && req.path.substr(req.path.size() - 3) == ".py"))
+	if (!req.query.empty())
 	{
 		send_response_cgi(req, client_ip, this->getIp(), fd);
 		return;

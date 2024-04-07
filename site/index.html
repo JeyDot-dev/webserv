@@ -47,10 +47,29 @@
 			<a href="/cookies">Test des coukies</a>
 			<a href="/tests">Cliquez ici pour voir les tests</a>
 		</p>
+		<h3>Fichier de test: </h3>
+		<input type="file" id="fileUpload" />
+		<button onclick="uploadFile()">Cliquez ici pour envoyer un fichier</button>
 	</div>
 
 	<div class="footer flex-center">
-		C'est un projet fait avec ❤️ par des Johan, Leo et Jordan
+		C'est un projet fait avec ❤️ par des Johan, Raph et Jordan
 	</div>
+	<script>
+		function uploadFile() {
+			var fileInput = document.getElementById('fileUpload');
+			var file = fileInput.files[0];
+			var formData = new FormData();
+			formData.append('file', file);
+
+			fetch('http://localhost:8080/api/file/', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => console.log(data))
+			.catch(error => console.error(error));
+		}
+	</script>
 </body>
 </html>

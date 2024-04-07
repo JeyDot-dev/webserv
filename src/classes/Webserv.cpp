@@ -159,9 +159,11 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 {
     //IF CGI
     // std::string response;
-    std::string response = _executeCgi(req, client_ip, this->getIp());
     // std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
     // std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
+
+	std::cout << "PATH: " << req.path << std::endl;
+	std::cout << "QUERY: " << req.query << std::endl;
 
 	if ((req.path.size() > 4 && req.path.substr(req.path.size() - 4) == ".php")
 		|| (req.path.size() > 3 && req.path.substr(req.path.size() - 3) == ".py"))
@@ -524,6 +526,7 @@ void	Webserv::serverLoop(std::map<int, Webserv> map_serv)
 	}
 	closeFds(read_set, max_fd);
 }
+
 void	Webserv::closeFds(fd_set& set, int max_fd, std::map<int, Webserv>* map_serv)
 {
     if  (map_serv == NULL)

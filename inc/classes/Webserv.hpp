@@ -36,7 +36,7 @@ struct Request
 
 	Request(std::map<std::string, std::string> *static_folders, fd_set *set) : static_folders(static_folders), set(set) {}
     Request(Request const&src) : method(src.method), path(src.path), folder(src.folder), file(src.file), mime_type(src.mime_type), version(src.version),
-                            headers(src.headers), body(src.body), static_folders(src.static_folders), set(src.set){}
+                            query(src.query), headers(src.headers), body(src.body), static_folders(src.static_folders), set(src.set){}
     Request(){}
 };
 

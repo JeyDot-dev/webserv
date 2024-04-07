@@ -1,6 +1,5 @@
 #include "Webserv.hpp"
 //#include <bits/types/struct_timeval.h>
-#include <bits/types/struct_timeval.h>
 #include <sys/time.h>
 #include <csignal>
 #include <cstring>
@@ -18,6 +17,8 @@
 #include <string>
 #include "ServerConfig.hpp"
 #include <algorithm>
+#include <sys/stat.h>
+#include <utils.hpp>
 
 std::string default_response("\
 HTTP/1.1 200 OK\n\
@@ -46,10 +47,22 @@ void send_file(int fd, const std::string& path, const std::string& mime_type);
 bool file_exists(const std::string& filename);
 void res(std::string status, std::string headers, std::string body, int fd);
 void res(std::string rep, int fd);
+void defaultPost(Request req, int fd);
 
 int	 Webserv::getFd() const
 {
 	return this->_sock_serv.getFd(); 
+}
+
+bool directoryExists(const std::string& path)
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    else if (info.st_mode & S_IFDIR)
+        return true;
+    else
+        return false;
 }
 
 int	 Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
@@ -210,14 +223,12 @@ void Webserv::getResponse(Request req, int fd)
 		_get[req.path](req, fd);
 	else if (file_exists(_static_folders[req.folder] + req.file))
 		send_file(fd, _static_folders[req.folder] + req.file, req.mime_type);
+	else if (file_exists(req.path))
+		send_file(fd, req.path, req.mime_type);
+	else if (req.file == "index.html" && (directoryExists(req.folder) || directoryExists(_static_folders[req.folder])))
+		std::cout << listFilesInDirectory(_static_folders[req.folder]) << std::endl;
 	else
 		res(error_404, fd);
-
-	std::map<std::string, std::string>::iterator it;
-	for (it = _static_folders.begin(); it != _static_folders.end(); it++)
-	{
-		std::cout << "Key: " << it->first << " Value: " << it->second << std::endl;
-	}
 }
 
 void Webserv::post(std::string path, FunctionType func)
@@ -234,7 +245,7 @@ void Webserv::postResponse(Request req, int fd)
 
 	int content_length = atoi(req.headers["Content-Length"].c_str());
 
-	if (req.body.size() != content_length)
+	if ((int)req.body.size() != content_length)
 	{
 		res("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", fd);
 		return;
@@ -246,7 +257,7 @@ void Webserv::postResponse(Request req, int fd)
 		return;
 	}
 
-	if (content_length > 100000)
+	if (content_length > 100000) //MAX BODY SIZE
 	{
 		res("HTTP/1.1 413 Request Entity Too Large\r\nContent-Length: 0\r\n\r\n", fd);
 		return;
@@ -580,6 +591,7 @@ bool file_exists(const std::string& filename)
 	std::ifstream file(filename.c_str());
 	return file.good();
 }
+
 void            check_hanging(fd_set& read_set, fd_set& write_set, fd_set& tmp_read_set,
                                 fd_set& tmp_write_set, std::map<int, Socket>& sock_clients, int max_fd,
                                 std::map<int, Request>& map_req, std::map<int, Webserv>& map_serv)

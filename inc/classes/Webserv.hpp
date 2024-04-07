@@ -27,6 +27,7 @@ struct Request
 	std::string     file;
 	std::string     mime_type;
 	std::string     version;
+	std::string		type; //File, Folder, CGI ?
 	std::map<std::string, std::string> headers;
 	std::string     body;
 	std::map<std::string, std::string> *static_folders;

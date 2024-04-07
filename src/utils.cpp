@@ -133,3 +133,27 @@ void webservInit(std::string file_path, std::map<int, Webserv> &map_serv)
 		exit(1);
 	}
 }
+
+std::string listFilesInDirectory(const std::string& path)
+{
+    DIR* dir = opendir(path.c_str());
+    if (dir == NULL)
+    {
+        // Le répertoire n'a pas pu être ouvert
+        return "";
+    }
+
+    std::string files;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        // Ne pas inclure les entrées "." et ".."
+        if (std::string(entry->d_name) != "." && std::string(entry->d_name) != "..")
+        {
+            files += std::string(entry->d_name) + "\n";
+        }
+    }
+
+    closedir(dir);
+    return files;
+}

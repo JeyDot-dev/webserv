@@ -73,7 +73,6 @@ bool directoryExists(const std::string& path)
 void    alarm_handler(int sig)
 {
     (void) sig;
-    std::cout << "Status: 508\r\n\r\n";
     exit (42);
 }
 
@@ -143,16 +142,24 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     delete[] args[0];
     delete[] args;
 	free_exec_args(env);
-    int exit_status = WIFEXITED(status);
-	if (exit_status && exit_status != 42)
+    if (WIFEXITED(status))
 	{
-        close(pipe_out[0]);
-		std::cerr << "Child terminated abnormally" << std::endl;
-		return ("Status: 500\r\n\r\n");
+        if (WEXITSTATUS(status) == 0)
+        {
+            ret = read_from_pipe(pipe_out[0]);
+            close(pipe_out[0]);
+            return ret;
+        }
 	}
-    ret = read_from_pipe(pipe_out[0]);
+    else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
+    {
+        close(pipe_out[0]);
+        std::cerr << "Child timed out" << std::endl;
+        return ("Status: 508\r\n\r\n");
+    }
     close(pipe_out[0]);
-	return ret;
+    std::cerr << "Child terminated abnormally" << std::endl;
+    return ("Status: 500\r\n\r\n");
 }
 
 void	Webserv::sendResponse(int fd, Request req, std::string client_ip)

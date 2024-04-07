@@ -73,7 +73,6 @@ bool directoryExists(const std::string& path)
 void    alarm_handler(int sig)
 {
     (void) sig;
-    std::cout << "Status: 508\r\n\r\n";
     exit (42);
 }
 
@@ -81,16 +80,15 @@ std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::s
 {
     Cgi         cgi_class(req, client_ip, host_ip);
     std::string ret;
-        char**      env = create_exec_args(cgi_class.getEnv());
-        int         status = 0;
-        int         child = 0;
+    char**      env = create_exec_args(cgi_class.getEnv());
+    int         status = 0;
+    int         child = 0;
     int         pipe_out[2];
-    int         pipe_in[2];
     char**      args;
 
     signal(SIGALRM, alarm_handler);
-    if (cgi_class.getPath().empty() || (req.method == "POST" && pipe(pipe_in) == -1) || pipe(pipe_out) == -1)
-        {
+    if (cgi_class.getPath().empty() || pipe(pipe_out) == -1)
+    {
         perror("execute Cgi");
         return ("Status: 500\r\n\r\n");
     }
@@ -99,58 +97,56 @@ std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::s
     args[1] = strdup(cgi_class.getScriptPath().c_str());
     args[2] = NULL;
     if ((child = fork()) == -1)
-        {
+    {
         delete[] args[0];
         delete[] args;
         perror("execute Cgi");
         return ("Status: 500\r\n\r\n");
     }
-    if (req.method == "POST" && write(pipe_in[1], req.body.c_str(), req.body.size()) <= 0)
+    if (child == 0)
     {
-        close(pipe_in[1]); close(pipe_in[0]); close(pipe_out[0]); close(pipe_out[1]);
-        delete[] args[0];
-        delete[] args;
-        return ("Status: 422\r\n\r\n");
-    }
-    close(pipe_in[1]);
-        if (child == 0)
-        {
-        alarm(5);
         close(pipe_out[0]);
-                if ((req.method == "POST" && dup2(pipe_in[0], STDIN_FILENO) == -1) || dup2(pipe_out[1], STDOUT_FILENO) == -1)
-                {
-                        perror("dup2 in child");
-                        exit(EXIT_FAILURE);
-                }
+        int pipe_in[2];
+        pipe(pipe_in);
+        if ((req.method == "POST" && dup2(pipe_in[0], STDIN_FILENO) == -1) || dup2(pipe_out[1], STDOUT_FILENO) == -1)
+        {
+            std::cerr << "dup2 error in child" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        if (req.method == "POST" && write(pipe_in[1], req.type.c_str(), req.type.size()) <= 0
+                && write(pipe_in[1], req.body.c_str(), req.body.size()) <= 0 && write(pipe_in[1], "\0", 1) <= 0)
+        {
+            std::cerr << "Cannot read body in child" << std::endl;
+            std::cout << "Status: 422\r\n\r\n";
+            exit(0);
+        }
         close(pipe_in[0]);
         close(pipe_out[1]);
-                execve(args[0], args, env);
-                perror("execve cgi:");
+        alarm(5);
+        std::cerr << "ARGS[0]: " << args[0] << "|ARGS[1]: " << args[1] << std::endl;
+        execve(args[0], args, env);
+        perror("execve cgi:");
         std::cout << "Status: 500\r\n\r\n";
-                exit(EXIT_FAILURE);
-        }
+        exit(EXIT_FAILURE);
+    }
     close(pipe_out[1]);
-    close(pipe_in[0]);
-        if (waitpid(child, &status, 0) == -1)
-        {
+    if (waitpid(child, &status, 0) == -1)
+    {
         free_exec_args(env);
         delete[] args[0];
         delete[] args;
-                perror("waitpid");
-                exit(EXIT_FAILURE);
-        }
+        perror("waitpid");
+        exit(EXIT_FAILURE);
+    }
     delete[] args[0];
     delete[] args;
-        free_exec_args(env);
-    if (WIFEXITED(status))
-        {
-        if (WEXITSTATUS(status) == 0)
-        {
-            ret = read_from_pipe(pipe_out[0]);
-            close(pipe_out[0]);
-            return ret;
-        }
-        }
+    free_exec_args(env);
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    {
+        ret = read_from_pipe(pipe_out[0]);
+        close(pipe_out[0]);
+        return ret;
+    }
     else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
     {
         close(pipe_out[0]);
@@ -176,10 +172,8 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 		std::cout << "PATH: " << req.path << std::endl;
 		std::cout << "QUERY: " << req.query << std::endl;
 		send_response_cgi(req, client_ip, this->getIp(), fd);
-		return;
 	}
-
-	if (req.method == "GET")
+    else if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")
 		postResponse(req, fd);
@@ -190,9 +184,10 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 	FD_CLR(fd, req.set);
 }
 
-std::string Webserv:: send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd)
+std::string Webserv::send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd)
 {
-	std::string response = _executeCgi(req, client_ip, host_ip);
+    std::string response = "HTTP/1.1 200 OK\r\n";
+	response += _executeCgi(req, client_ip, host_ip);
 	res(response, fd);
 	return response;
 }

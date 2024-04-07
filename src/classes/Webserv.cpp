@@ -71,17 +71,6 @@ bool directoryExists(const std::string& path)
         return false;
 }
 
-bool directoryExists(const std::string& path)
-{
-    struct stat info;
-    if (stat(path.c_str(), &info) != 0)
-        return false;
-    else if (info.st_mode & S_IFDIR)
-        return true;
-    else
-        return false;
-}
-
 std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
 {
     Cgi         cgi_class(req, client_ip, host_ip);
@@ -331,7 +320,8 @@ void defaultPost(Request req, int fd)
     }
 
 	//Faut juste que je vois pour le nom du fichier...
-    std::ofstream file("file." + extension, std::ios::binary);
+	std::string filename = "file." + extension;
+    std::ofstream file(filename.c_str(), std::ios::binary);
     file.write(req.body.c_str(), req.body.size());
     if (!file) //On verifie si le fichier a bien ete cree
     {

@@ -168,6 +168,7 @@ void parseRequest(std::string request, Request &ret)
 		std::string value = request.substr(0, request.find("\n"));
 		request = request.substr(request.find("\n") + 1);
 		ret.headers.insert(std::pair<std::string, std::string>(key, value));
+		std::cout << key << ": " << value << std::endl;
 	}
 	ret.body = request; //On recupere le body (c'est tout ce qui reste)
 
@@ -207,12 +208,6 @@ void Webserv::getResponse(Request req, int fd)
 		send_file(fd, _static_folders[req.folder] + req.file, req.mime_type);
 	else
 		res(error_404, fd);
-
-	std::map<std::string, std::string>::iterator it;
-	for (it = _static_folders.begin(); it != _static_folders.end(); it++)
-	{
-		std::cout << "Key: " << it->first << " Value: " << it->second << std::endl;
-	}
 }
 
 void Webserv::post(std::string path, FunctionType func)

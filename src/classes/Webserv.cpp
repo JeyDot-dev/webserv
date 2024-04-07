@@ -57,7 +57,12 @@ int	 Webserv::getFd() const
 {
 	return this->_sock_serv.getFd(); 
 }
-
+void    alarm_handler(int sig)
+{
+    (void) sig;
+    std::cout << "Status: 508\r\n\r\n";
+    exit (42);
+}
 std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
 {
     Cgi         cgi_class(req, client_ip, host_ip);
@@ -69,6 +74,7 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     int         pipe_in[2];
     char**      args;
 
+    signal(SIGALRM, alarm_handler);
     if (cgi_class.getPath().empty() || (req.method == "POST" && pipe(pipe_in) == -1) || pipe(pipe_out) == -1)
 	{
     	perror("execute Cgi");
@@ -95,6 +101,7 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     close(pipe_in[1]);
 	if (child == 0)
 	{
+        alarm(5);
         close(pipe_out[0]);
 		if ((req.method == "POST" && dup2(pipe_in[0], STDIN_FILENO) == -1) || dup2(pipe_out[1], STDOUT_FILENO) == -1)
 		{
@@ -105,12 +112,15 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
         close(pipe_out[1]);
 		execve(args[0], args, env); 
 		perror("execve cgi:");
+        std::cout << "Status: 500\r\n\r\n";
 		exit(EXIT_FAILURE);
 	}
     close(pipe_out[1]);
     close(pipe_in[0]);
+    std::cerr << "-----PRE WAITPID" << std::endl;
 	if (waitpid(child, &status, 0) == -1)
 	{
+        free_exec_args(env);
         delete args[0];
         delete args;
 		perror("waitpid");
@@ -118,12 +128,14 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 	}
     delete args[0];
     delete args;
-	if (!WIFEXITED(status) || WEXITSTATUS(status))
+	free_exec_args(env);
+    int exit_status = WIFEXITED(status);
+	if (exit_status && exit_status != 42)
 	{
+        close(pipe_out[0]);
 		std::cerr << "Child terminated abnormally" << std::endl;
 		return ("Status: 500\r\n\r\n");
 	}
-	free_exec_args(env);
     ret = read_from_pipe(pipe_out[0]);
     close(pipe_out[0]);
 	return ret;

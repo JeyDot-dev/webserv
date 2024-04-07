@@ -54,7 +54,6 @@ MAKEFLAGS   += --no-print-directory
 all		:	$(NAME)
 #-----------------------------NAME-----------------------------------
 $(NAME)	:	$(OBJ)
-			$(MAKE) -C cgi
 			TOTAL_OBJ=$(find .build -name "*.o")
 			echo "currently $(TOTAL_OBJ) objects out of $(TOTAL_OBJ) are compiled"
 #			$(MAKE) complib
@@ -83,7 +82,6 @@ $(BUILD_D)%.o	:	$(SRC_D)%.cpp
 #----------------------------CLEAN-----------------------------------
 clean	:
 	$(RM) $(OBJ) $(DEPS)
-	$(MAKE) -C cgi clean
 #ifeq ($(UNAME_S),Darwin)
 #	$(MAKE) -C mlx-opengl clean
 #else
@@ -92,7 +90,6 @@ clean	:
 	echo "$(CYN) \t\tALL CLEANED $(RST)"
 #----------------------------FCLEAN----------------------------------
 fclean	:
-	$(MAKE) -C cgi fclean
 	$(RM) $(OBJ) $(DEPS)
 	$(RM) $(NAME)
 #ifeq ($(UNAME_S),Darwin)

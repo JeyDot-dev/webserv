@@ -11,6 +11,7 @@ class	Socket
 {
 
 public:
+    std::string     getIp() const;
     struct timeval  getLastActivity() const;
     void            updateLastActivity();
     void            showInfo() const;

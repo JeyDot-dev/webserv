@@ -15,7 +15,9 @@
 #include <unistd.h>
 #include <map>
 #include <string>
+#include "Cgi.hpp"
 #include "ServerConfig.hpp"
+#include "utils.hpp"
 #include <algorithm>
 #include <sys/stat.h>
 #include <utils.hpp>
@@ -49,6 +51,10 @@ void res(std::string status, std::string headers, std::string body, int fd);
 void res(std::string rep, int fd);
 void defaultPost(Request req, int fd);
 
+std::string Webserv::getIp() const
+{
+    return this->_sock_serv.getIp();
+}
 int	 Webserv::getFd() const
 {
 	return this->_sock_serv.getFd(); 
@@ -65,59 +71,101 @@ bool directoryExists(const std::string& path)
         return false;
 }
 
-int	 Webserv::_executeCgi(int fd, std::string path, std::vector<std::string> args)
+bool directoryExists(const std::string& path)
 {
-	char** tmp = create_exec_args(args);
-	int status = 0;
-	int child = 0;
-//	int pipe_fd[2];
-//	if (pipe(pipe_fd) == -1)
-//	{
-//	perror("pipe in executCgi");
-//	exit(EXIT_FAILURE);
-//	}
-	child = fork();
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    else if (info.st_mode & S_IFDIR)
+        return true;
+    else
+        return false;
+}
+
+std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
+{
+    Cgi         cgi_class(req, client_ip, host_ip);
+    std::string ret;
+	char**      env = create_exec_args(cgi_class.getEnv());
+	int         status = 0;
+	int         child = 0;
+    int         pipe_out[2];
+    int         pipe_in[2];
+    char**      args;
+
+    if (cgi_class.getPath().empty() || (req.method == "POST" && pipe(pipe_in) == -1) || pipe(pipe_out) == -1)
+	{
+    	perror("execute Cgi");
+        return ("Status: 500\r\n\r\n");
+    }
+    args = new char*[3];
+    args[0] = strdup(cgi_class.getPath().c_str());
+    args[1] = strdup(cgi_class.getScriptPath().c_str());
+    args[2] = NULL;
+    if ((child = fork()) == -1)
+	{
+        delete args[0];
+        delete args;
+    	perror("execute Cgi");
+        return ("Status: 500\r\n\r\n");
+    }
+    if (req.method == "POST" && write(pipe_in[1], req.body.c_str(), req.body.size()) <= 0)
+    {
+        close(pipe_in[1]); close(pipe_in[0]); close(pipe_out[0]); close(pipe_out[1]);
+        delete args[0];
+        delete args;
+        return ("Status: 422\r\n\r\n");
+    }
+    close(pipe_in[1]);
 	if (child == 0)
 	{
-		if (dup2(fd, STDOUT_FILENO) == -1)
+        close(pipe_out[0]);
+		if ((req.method == "POST" && dup2(pipe_in[0], STDIN_FILENO) == -1) || dup2(pipe_out[1], STDOUT_FILENO) == -1)
 		{
 			perror("dup2 in child");
 			exit(EXIT_FAILURE);
 		}
-		execve(path.c_str(), tmp, envp); 
-		perror("execve");
-		exit(1);
+        close(pipe_in[0]);
+        close(pipe_out[1]);
+		execve(args[0], args, env); 
+		perror("execve cgi:");
+		exit(EXIT_FAILURE);
 	}
+    close(pipe_out[1]);
+    close(pipe_in[0]);
 	if (waitpid(child, &status, 0) == -1)
 	{
+        delete args[0];
+        delete args;
 		perror("waitpid");
 		exit(EXIT_FAILURE);
 	}
+    delete args[0];
+    delete args;
 	if (!WIFEXITED(status) || WEXITSTATUS(status))
 	{
 		std::cerr << "Child terminated abnormally" << std::endl;
-		return -1;
+		return ("Status: 500\r\n\r\n");
 	}
-	free_exec_args(tmp);
-	return 0;
+	free_exec_args(env);
+    ret = read_from_pipe(pipe_out[0]);
+    close(pipe_out[0]);
+	return ret;
 }
 
-void	Webserv::sendResponse(int fd, Request req)
+void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 {
-	/*	  CGI TEST
-	response = "ET OUI MEME T'ES BIEN MOUCHEE";
-	std::string				 path("cgi/bin/cgi_test.cgi");
-	std::vector<std::string>	args;
-	args.push_back("cgi_test.cgi");
-	_executeCgi(fd, path, args);
-	*/
-
-	if (req.method == "GET")
+    //IF CGI
+    //std::string response;
+    std::string response = _executeCgi(req, client_ip, this->getIp());
+    std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
+    std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
+/*	if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")
 		postResponse(req, fd);
-	else
-		res(default_response, fd);
+	else*/
+		res(response_test, fd);
 
 
 // 	if (_static_folders.find(path) == _static_folders.end())
@@ -461,7 +509,7 @@ void	Webserv::serverLoop(std::map<int, Webserv> map_serv)
 			}
             else if (FD_ISSET(i, &tmp_write_set))
             {
-				map_serv[sock_clients[i].server_fd].sendResponse(i, map_req[i]);
+				map_serv[sock_clients[i].server_fd].sendResponse(i, map_req[i], sock_clients[i].getIp());
                 map_req.erase(i);
                 sock_clients.erase(i);
             }

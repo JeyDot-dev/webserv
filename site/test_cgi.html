@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST PAGE FOR CGI</title>
+</head>
+<body>
+    <h1>GET name</h1>
+<form action = "/cgi-bin/get_name.py" method = "get">
+   First Name: <input type = "text" name = "first_name">  <br />
+
+   Last Name: <input type = "text" name = "last_name" />
+   <input type = "submit" value = "Submit" />
+</form>
+    <h1>POST name</h1>
+<form action = "/cgi-bin/post_name.py" method = "post">
+    First Name: <input type = "text" name = "first_name"><br />
+    Last Name: <input type = "text" name = "last_name" />
+
+    <input type = "submit" value = "Submit" />
+</form>
+</body>
+</html>

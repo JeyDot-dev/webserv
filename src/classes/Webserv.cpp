@@ -131,7 +131,6 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
 	}
     close(pipe_out[1]);
     close(pipe_in[0]);
-    std::cerr << "-----PRE WAITPID" << std::endl;
 	if (waitpid(child, &status, 0) == -1)
 	{
         free_exec_args(env);

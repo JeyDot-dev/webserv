@@ -73,6 +73,7 @@ bool directoryExists(const std::string& path)
 void    alarm_handler(int sig)
 {
     (void) sig;
+    std::cout << "Status: 508\r\n\r\n";
     exit (42);
 }
 
@@ -142,24 +143,16 @@ std::string	 Webserv::_executeCgi(Request req, std::string client_ip, std::strin
     delete[] args[0];
     delete[] args;
 	free_exec_args(env);
-    if (WIFEXITED(status))
+    int exit_status = WIFEXITED(status);
+	if (exit_status && exit_status != 42)
 	{
-        if (WEXITSTATUS(status) == 0)
-        {
-            ret = read_from_pipe(pipe_out[0]);
-            close(pipe_out[0]);
-            return ret;
-        }
-	}
-    else if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
-    {
         close(pipe_out[0]);
-        std::cerr << "Child timed out" << std::endl;
-        return ("Status: 508\r\n\r\n");
-    }
+		std::cerr << "Child terminated abnormally" << std::endl;
+		return ("Status: 500\r\n\r\n");
+	}
+    ret = read_from_pipe(pipe_out[0]);
     close(pipe_out[0]);
-    std::cerr << "Child terminated abnormally" << std::endl;
-    return ("Status: 500\r\n\r\n");
+	return ret;
 }
 
 void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
@@ -169,11 +162,12 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
     // std::string response_test = "HTTP/1.1 200 OK\r\n" + response;
     // std::cout << "RESPONSE FROM CGI: " << response_test << std::endl;
 
-	std::cout << "PATH: " << req.path << std::endl;
-	std::cout << "QUERY: " << req.query << std::endl;
 
-	if (!req.query.empty())
+	if ((req.path.size() > 4 && req.path.substr(req.path.size() - 4) == ".php")
+		|| (req.path.size() > 3 && req.path.substr(req.path.size() - 3) == ".py"))
 	{
+		std::cout << "PATH: " << req.path << std::endl;
+		std::cout << "QUERY: " << req.query << std::endl;
 		send_response_cgi(req, client_ip, this->getIp(), fd);
 		return;
 	}

@@ -162,6 +162,16 @@ std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::s
     return ("Status: 500\r\n\r\n");
 }
 
+void optionsReponse(int fd)
+{
+	std::string response = "HTTP/1.1 200 OK\r\n"
+						   "Access-Control-Allow-Origin: *\r\n"
+						   "Access-Control-Allow-Methods: POST, GET, OPTIONS, DELETE\r\n"
+						   "Access-Control-Allow-Headers: Content-Type, Content-Name, Content-Length, Content-Extension\r\n"
+						   "Content-Length: 0\r\n\r\n";
+	res(response, fd);
+}
+
 void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 {
     //IF CGI
@@ -179,12 +189,18 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 		return;
 	}
 
+	std::cout << "METHOD: " << req.method << std::endl;
+
 	if (req.method == "GET")
 		getResponse(req, fd);
 	else if (req.method == "POST")
 		postResponse(req, fd);
+	else if (req.method == "DELETE")
+		deleteResponse(req, fd);
+	else if (req.method == "OPTIONS")
+		optionsReponse(fd);
 	else
-		res(error_404, fd);
+		res("HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n", fd);
 
 	close(fd);
 	FD_CLR(fd, req.set);
@@ -307,12 +323,6 @@ void Webserv::postResponse(Request req, int fd)
 
 	int content_length = atoi(req.headers["Content-Length"].c_str());
 
-	if ((int)req.body.size() != content_length)
-	{
-		res("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", fd);
-		return;
-	}
-
 	if (content_length == 0)
 	{
 		res("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n", fd);
@@ -330,31 +340,67 @@ void Webserv::postResponse(Request req, int fd)
 		defaultPost(req, fd);
 }
 
+void Webserv::deleteResponse(Request req, int fd)
+{
+	std::string path = req.path;
+    if (path[0] != '/')
+    {
+        path = "./" + path;
+    }
+	if (path[0] == '/')
+    {
+        path = "." + path;
+    }
+	if(path == "/")
+	{
+		res("HTTP/1.1 403 Forbidden\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\n\r\n", fd);
+		return;
+	}
+	if (path[path.size() - 1] == '/')
+		path = path.substr(0, path.size() - 1);
+	
+	std::cout << "PATH: " << path << std::endl;
+	if (remove(path.c_str()) != 0)
+    {
+        std::string errorMsg = strerror(errno);
+        std::cout << "Error deleting file: " << errorMsg << std::endl;
+        res("HTTP/1.1 500 Internal Server Error\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\n\r\n", fd);
+        return;
+    }
+	res("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\n\r\n", fd);
+}
+
 void defaultPost(Request req, int fd)
 {
-    // Obtenir l'extension du fichier à partir du type de contenu
-    std::string extension;
-    if (req.headers["Content-Type"] == "application/json")
-    {
-        extension = "json";
-    }
-    else
-    {
-        extension = req.headers["Content-Type"].substr(req.headers["Content-Type"].find("/") + 1);
-    }
+    std::string filename = req.headers["Content-Name"];
+    std::ofstream file;
 
-	//Faut juste que je vois pour le nom du fichier...
-	std::string filename = "file." + extension;
-    std::ofstream file(filename.c_str(), std::ios::binary);
-    file.write(req.body.c_str(), req.body.size());
+	//C'est pour clean le nom du fichier, parce que y'a des espaces et des trucs à la con qui s'y mettent:
+	filename.erase(std::remove(filename.begin(), filename.end(), '\n'), filename.end());
+	filename.erase(std::remove(filename.begin(), filename.end(), '\r'), filename.end());
+	filename.erase(std::remove(filename.begin(), filename.end(), '\t'), filename.end());
+	filename.erase(std::remove(filename.begin(), filename.end(), ' '), filename.end());
+
+    file.open(filename.c_str(), std::ios::binary);
+
     if (!file) //On verifie si le fichier a bien ete cree
     {
-		std::string response = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+        std::string response = "HTTP/1.1 500 Internal Server Error\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\n\r\n";
         res(response, fd);
         return;
     }
 
-	std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+    file.write(req.body.c_str(), req.body.size());
+    file.close();
+
+    std::string body = "File uploaded successfully";
+    std::ostringstream size;
+    size << body.size();
+    std::string response = "HTTP/1.1 200 OK\r\n"
+                           "Access-Control-Allow-Origin: *\r\n"
+                           "Content-Type: text/plain\r\n"
+                           "Content-Length: " + size.str() + "\r\n\r\n"
+                           + body;
     res(response, fd);
 }
 

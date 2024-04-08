@@ -51,7 +51,9 @@
 	<h3>Fichier de test: </h3>
 	<input type="file" id="fileUpload" />
 	<button onclick="uploadFile()">Cliquez ici pour envoyer un fichier</button>
-
+	<h3>Fichier à supprimer: </h3>
+	<input type="text" id="filename" />
+	<button onclick="deleteFile(document.getElementById('filename').value)">Cliquez ici pour supprimer un fichier</button>
 	<div class="footer flex-center">
 		C'est un projet fait avec ❤️ par des Johan, Raph et Jordan
 	</div>
@@ -59,15 +61,40 @@
 		function uploadFile() {
 			var fileInput = document.getElementById('fileUpload');
 			var file = fileInput.files[0];
-			var formData = new FormData();
-			formData.append('file', file);
-
-			fetch('http://localhost:8080/api/file/', {
-				method: 'POST',
-				body: formData
+			var extension = file.name.split('.').pop();
+			var reader = new FileReader();
+			reader.onload = function(event) {
+				var cleanName = file.name.trim().replace(/\r/g, '');
+				fetch('http://localhost:8080/api/file/', {
+					method: 'POST',
+					headers: {
+						'Content-Type': file.type,
+						'Content-Name': cleanName,
+						'Content-Length': file.size,
+						'Content-Extension': extension
+					},
+					body: event.target.result
+				}).then(response => {
+					if (response.ok) {
+						console.log('File uploaded');
+					} else {
+						console.error('File not uploaded');
+					}
+				}).catch(error => console.error(error));
+			};
+			reader.readAsArrayBuffer(file);
+		}
+		function deleteFile(filename) {
+			fetch('http://localhost:8080/' + filename, {
+				method: 'DELETE'
 			})
-			.then(response => response.json())
-			.then(data => console.log(data))
+			.then(response => {
+				if (response.ok) {
+					console.log('File deleted');
+				} else {
+					console.error('File not deleted');
+				}
+			})
 			.catch(error => console.error(error));
 		}
 	</script>

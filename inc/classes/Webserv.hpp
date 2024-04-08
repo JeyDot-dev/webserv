@@ -62,6 +62,7 @@ public:
 	void getResponse(Request req, int fd);
 	void post(std::string path, FunctionType func);
 	void postResponse(Request req, int fd);
+	void deleteResponse(Request req, int fd);
 	std::string send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd);
 
     char**                  envp;

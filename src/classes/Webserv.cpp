@@ -80,8 +80,8 @@ std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::s
 {
 
 	//DEBUG:
-	// std::cout << "PATH: " << req.path << std::endl;
-	// std::cout << "QUERY: " << req.query << std::endl;
+	std::cout << "PATH: " << req.path << std::endl;
+	std::cout << "QUERY: " << req.query << std::endl;
 
     Cgi         cgi_class(req, client_ip, host_ip);
     std::string ret;

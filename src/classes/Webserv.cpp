@@ -78,6 +78,11 @@ void    alarm_handler(int sig)
 
 std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
 {
+
+	//DEBUG:
+	// std::cout << "PATH: " << req.path << std::endl;
+	// std::cout << "QUERY: " << req.query << std::endl;
+
     Cgi         cgi_class(req, client_ip, host_ip);
     std::string ret;
     char**      env = create_exec_args(cgi_class.getEnv());
@@ -200,7 +205,7 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 
 std::string Webserv::send_response_cgi(Request req, std::string client_ip, std::string host_ip, int fd)
 {
-    std::string response = "HTTP/1.1 200 OK\r\n";
+    std::string response = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n";
 	response += _executeCgi(req, client_ip, host_ip);
 	res(response, fd);
 	return response;

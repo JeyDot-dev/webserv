@@ -79,9 +79,6 @@ void    alarm_handler(int sig)
 std::string      Webserv::_executeCgi(Request req, std::string client_ip, std::string host_ip)
 {
 
-	//DEBUG:
-	std::cout << "PATH: " << req.path << std::endl;
-	std::cout << "QUERY: " << req.query << std::endl;
 
     Cgi         cgi_class(req, client_ip, host_ip);
     std::string ret;
@@ -184,8 +181,6 @@ void	Webserv::sendResponse(int fd, Request req, std::string client_ip)
 	if ((req.path.size() > 4 && req.path.substr(req.path.size() - 4) == ".php")
 		|| (req.path.size() > 3 && req.path.substr(req.path.size() - 3) == ".py"))
 	{
-		std::cout << "PATH: " << req.path << std::endl;
-		std::cout << "QUERY: " << req.query << std::endl;
 		send_response_cgi(req, client_ip, this->getIp(), fd);
 	}
     else if (req.method == "GET")
@@ -289,11 +284,11 @@ void Webserv::get(std::string path, FunctionType func)
 void Webserv::getResponse(Request req, int fd)
 {
 	// DEBUG:
-	std::cout << "GET Response: " << _static_folders[req.path] + req.file << std::endl;
+/*	std::cout << "GET Response: " << _static_folders[req.path] + req.file << std::endl;
 	std::cout << "path: " << req.path << std::endl;
 	std::cout << "folder: " << req.folder << std::endl;
 	std::cout << "file: " << req.file << std::endl;
-
+*/
 	if (_get.find(req.path) != _get.end())
 		_get[req.path](req, fd);
 	else if (file_exists(_static_folders[req.folder] + req.file))
@@ -361,7 +356,7 @@ void Webserv::deleteResponse(Request req, int fd)
 	if (remove(path.c_str()) != 0)
     {
         std::string errorMsg = strerror(errno);
-        std::cout << "Error deleting file: " << errorMsg << std::endl;
+        std::cerr<< "Error deleting file: " << errorMsg << std::endl;
         res("HTTP/1.1 500 Internal Server Error\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\n\r\n", fd);
         return;
     }
@@ -455,8 +450,8 @@ Webserv::Webserv(ServerConfig &new_config) {
 		for (it = locations.begin(); it != locations.end(); it++)
 		{
 			use(it->first, _config.getLocationValue(it->first, "root"));
-			std::cout << "Location: " << it->first << std::endl;
-			std::cout << _config.getLocationValue(it->first, "root") << std::endl;
+//			std::cout << "Location: " << it->first << std::endl;
+//			std::cout << _config.getLocationValue(it->first, "root") << std::endl;
 		}
 	}
 	catch (std::exception &e)
